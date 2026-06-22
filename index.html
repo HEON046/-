@@ -3,43 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>김상헌 | 게임 QA & 기획</title>
+    <title>김상헌 | 게임 QA & 기획 포트폴리오</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- 가독성 특화 폰트: Pretendard -->
+    <!-- 가독성 특화 프리텐다드 서체 -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-            background-color: #060913;
-            color: #f1f5f9;
-            letter-spacing: -0.03em;
-            overflow: hidden; /* 일반 스크롤바 완전 제거 */
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: #f4f7ff; /* 밝고 깨끗한 화이트 블루 우주 베이스 */
+            color: #1e293b;
+            letter-spacing: -0.02em;
+            overflow: hidden;
         }
 
-        /* --- 3D 시네마틱 공간 설정 --- */
+        /* --- 시네마틱 밝은 우주 & 오로라 기하학 배경 --- */
+        .cosmic-viewport {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* 우주 성운(Nebula) 느낌의 은은하고 밝은 그라데이션 오버레이 */
+        .cosmic-nebula-1 {
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(199, 210, 254, 0.4) 0%, rgba(244, 247, 255, 0) 70%);
+            filter: blur(60px);
+        }
+        .cosmic-nebula-2 {
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(254, 215, 226, 0.35) 0%, rgba(244, 247, 255, 0) 70%);
+            filter: blur(80px);
+        }
+        /* 밝은 우주의 별무리를 형상화한 미세 격자 */
+        .cosmic-stardust {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        /* 공전 궤도를 시각화한 화이트/블루 기하학 링 */
+        .orbit-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(99, 102, 241, 0.06);
+            transform: rotateX(60deg) rotateY(-10deg);
+        }
+        /* 우주의 중력 스펙트럼 선 */
+        .gravity-line {
+            position: absolute;
+            width: 200%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            transform: rotate(-20deg);
+        }
+        /* 별자리 노드 데코 */
+        .cosmic-node {
+            position: absolute;
+            color: rgba(99, 102, 241, 0.25);
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* --- 3D 스페이스 카메라 줌 메커니즘 --- */
         .viewport-3d {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            perspective: 1000px; /* 3D 깊이감 강도 정의 */
+            perspective: 1200px;
             perspective-origin: 50% 50%;
             z-index: 1;
         }
-
         .container-3d {
             position: absolute;
             width: 100%;
             height: 100%;
             transform-style: preserve-3d;
-            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1); /* 부드러운 카메라 무빙 */
+            transition: transform 1.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        /* 각 섹션을 3D 공간에 배치 */
         .section-3d {
             position: absolute;
             width: 100%;
@@ -50,124 +105,109 @@
             align-items: center;
             justify-content: center;
             backface-visibility: hidden;
-            transition: opacity 0.8s ease;
+            transition: opacity 0.8s ease, filter 0.8s ease;
         }
 
-        /* --- 기하학 테크 배경 패턴 --- */
-        .tech-bg {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 0;
+        /* 밝은 우주 컨셉에 맞춘 불투명 화이트 글래스모피즘 카드 */
+        .cosmic-glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 30px 60px -15px rgba(99, 102, 241, 0.08);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .tech-grid {
-            position: absolute;
-            inset: 0;
-            background-image: linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
-            background-size: 50px 50px;
-        }
-        .geo-circle { position: absolute; border-radius: 50%; border: 1px solid rgba(16, 185, 129, 0.08); }
-        .geo-square { position: absolute; border: 1px solid rgba(20, 184, 166, 0.04); transform: rotate(45deg); }
-        .geo-line { position: absolute; height: 1px; background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), transparent); }
-
-        /* 글래스모피즘 효과 */
-        .glass-card {
-            background: rgba(11, 17, 32, 0.65);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .cosmic-glass:hover {
+            transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 40px 80px -15px rgba(99, 102, 241, 0.15);
         }
     </style>
 </head>
-<body class="antialiased selection:bg-emerald-500 selection:text-slate-900 relative">
+<body class="antialiased selection:bg-indigo-200 selection:text-indigo-900">
 
-    <!-- 글로벌 추상 도형 배경 -->
-    <div class="tech-bg">
-        <div class="tech-grid h-full w-full"></div>
-        <div class="geo-circle w-[700px] h-[700px] -top-60 -left-60"></div>
-        <div class="geo-circle w-[400px] h-[400px] top-40 left-1/4 border-dashed"></div>
-        <div class="geo-square w-32 h-32 top-28 right-16"></div>
-        <div class="geo-line w-full top-[15%] left-0"></div>
-        <div class="geo-circle w-[500px] h-[500px] bottom-[-100px] left-[-50px] border-emerald-500/5"></div>
+    <!-- 밝은 우주 기하학 배경 레이어 -->
+    <div class="cosmic-viewport">
+        <div class="cosmic-nebula-1"></div>
+        <div class="cosmic-nebula-2"></div>
+        <div class="cosmic-stardust"></div>
+        <div class="gravity-line top-[30%] left-[-50%]"></div>
+        <div class="gravity-line top-[70%] left-[-30%]" style="background: linear-gradient(90deg, transparent, rgba(219,39,119,0.05), transparent)"></div>
+        
+        <!-- 은하 궤도 링 분산 배치 -->
+        <div class="orbit-ring w-[800px] h-[800px] -top-60 -left-40"></div>
+        <div class="orbit-ring w-[500px] h-[500px] bottom-10 right-[-100px] border-dashed border-indigo-300/30"></div>
+        <div class="orbit-ring w-[1100px] h-[1100px] top-1/4 left-1/5"></div>
+        
+        <!-- 기하학 좌표 스타 노드 -->
+        <div class="cosmic-node top-32 left-[12%]">SYS.NODE // 01</div>
+        <div class="cosmic-node bottom-40 left-[48%]">SYS.NODE // 02</div>
+        <div class="cosmic-node top-1/3 right-[15%]">SYS.NODE // 03</div>
     </div>
 
-    <!-- 고정 네비게이션 바 -->
-    <header class="fixed top-0 left-0 w-full bg-slate-950/60 backdrop-blur-xl border-b border-white/5 z-50">
-        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-            <button onclick="zoomToSection(0)" class="font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400 text-sm cursor-pointer">KIM SANG HEON</button>
-            <nav class="hidden md:flex space-x-8 text-xs font-bold tracking-wider">
-                <button onclick="zoomToSection(0)" class="nav-btn text-emerald-400 cursor-pointer">HOME</button>
-                <button onclick="zoomToSection(1)" class="nav-btn text-slate-400 hover:text-emerald-400 transition cursor-pointer">ABOUT</button>
-                <button onclick="zoomToSection(2)" class="nav-btn text-slate-400 hover:text-emerald-400 transition cursor-pointer">SKILLS</button>
-                <button onclick="zoomToSection(3)" class="nav-btn text-slate-400 hover:text-emerald-400 transition cursor-pointer">EXPERIENCE</button>
+    <!-- 고정 네비게이션 헤더 -->
+    <header class="fixed top-0 left-0 w-full bg-white/40 backdrop-blur-md border-b border-indigo-100/50 z-50">
+        <div class="max-w-6xl mx-auto px-8 h-16 flex items-center justify-between">
+            <button onclick="zoomToSection(0)" class="font-black tracking-widest text-indigo-900 text-xs cursor-pointer hover:text-indigo-600 transition">KIM SANG HEON</button>
+            <nav class="hidden md:flex space-x-10 text-[11px] font-bold tracking-widest text-slate-500">
+                <button onclick="zoomToSection(0)" class="nav-btn text-indigo-600 cursor-pointer">HOME</button>
+                <button onclick="zoomToSection(1)" class="nav-btn hover:text-indigo-600 transition cursor-pointer">ABOUT</button>
+                <button onclick="zoomToSection(2)" class="nav-btn hover:text-indigo-600 transition cursor-pointer">SKILLS</button>
+                <button onclick="zoomToSection(3)" class="nav-btn hover:text-indigo-600 transition cursor-pointer">EXPERIENCE</button>
             </nav>
         </div>
     </header>
 
-    <!-- 3D 뷰포트 컨테이너 -->
+    <!-- 3D 스페이스 카메라 무대 -->
     <div class="viewport-3d">
         <div class="container-3d" id="space3d">
 
-            <!-- [섹션 0] 메인 히어로 -->
-            <div class="section-3d px-6" style="transform: translateZ(0px); z-index: 4;">
-                <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-                    <div class="space-y-8 md:col-span-7">
-                        <div class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-md text-xs font-bold text-emerald-400 tracking-wide">
-                            <span>GAME QA & SYSTEM DESIGN</span>
+            <!-- [섹션 0] 메인 및 커리어 개요 -->
+            <div class="section-3d px-8" style="transform: translateZ(0px); z-index: 4;">
+                <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                    
+                    <!-- 좌측: 가독성 극대화된 딥 블루 타이포그래피 -->
+                    <div class="space-y-8 lg:col-span-7">
+                        <div class="inline-flex items-center space-x-2 bg-indigo-100 border border-indigo-200 px-3 py-1 rounded text-[10px] font-bold text-indigo-700 tracking-widest uppercase">
+                            <span>BRIGHT COSMOS // QA SYSTEM</span>
                         </div>
-                        <h1 class="text-5xl md:text-7xl font-black text-slate-100 leading-[1.15] tracking-tight">
+                        <h1 class="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-[1.12] tracking-tight">
                             데이터 기반 분석,<br>
-                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400">품질을 완벽 검증</span><br>
-                            하는 <span class="text-white underline decoration-emerald-500 decoration-8 underline-offset-8">김상헌</span>입니다.
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-blue-600 to-slate-700">품질을 완벽 검증</span><br>
+                            하는 김상헌입니다.
                         </h1>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
-                            <div class="p-4 rounded-xl bg-slate-900/80 border border-white/5 flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400"><i class="fa-regular fa-envelope text-sm"></i></div>
-                                <div class="flex flex-col">
-                                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Contact E-mail</span>
-                                    <a href="mailto:rlatkdgjs0304@naver.com" class="text-xs font-bold text-slate-300 hover:text-emerald-300 transition font-mono">rlatkdgjs0304@naver.com</a>
-                                </div>
-                            </div>
-                            <div class="p-4 rounded-xl bg-slate-900/80 border border-white/5 flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-400"><i class="fa-solid fa-chart-simple text-sm"></i></div>
-                                <div class="flex flex-col">
-                                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Core Strength</span>
-                                    <span class="text-xs font-bold text-slate-300">사실·데이터 기반 냉정한 상황 분석</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-2">
-                            <button onclick="zoomToSection(1)" class="inline-flex items-center space-x-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs px-8 py-4 rounded-xl transition shadow-xl shadow-emerald-500/20 tracking-wider uppercase cursor-pointer">
-                                <span>마우스 휠을 돌리거나 클릭하여 탐색</span>
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </button>
+                        
+                        <!-- 슬림 연락처 바 -->
+                        <div class="flex flex-wrap gap-4 text-xs font-bold text-slate-500 pt-2 border-t border-indigo-100 max-w-xl">
+                            <span class="flex items-center space-x-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                <a href="mailto:rlatkdgjs0304@naver.com" class="hover:text-indigo-600 transition font-mono tracking-wide">rlatkdgjs0304@naver.com</a>
+                            </span>
                         </div>
                     </div>
                     
-                    <div class="md:col-span-5 flex justify-center w-full">
-                        <div class="w-full max-w-sm rounded-2xl p-6 glass-card border border-white/10 relative overflow-hidden space-y-6 shadow-2xl">
-                            <div class="absolute top-0 right-0 w-24 h-24 border-b border-l border-white/5 bg-gradient-to-bl from-emerald-500/5 to-transparent"></div>
-                            <div class="flex items-center justify-between border-b border-white/5 pb-4">
-                                <div class="flex items-center space-x-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-[11px] font-mono tracking-widest text-slate-400 uppercase">QA Metrics Overview</span></div>
-                                <span class="text-[10px] font-mono bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-bold border border-emerald-500/20">LIVE STATUS</span>
+                    <!-- 우측: 밝은 화이트 글래스로 바꾼 프로필 개요 위젯 -->
+                    <div class="lg:col-span-5 flex justify-center w-full">
+                        <div class="w-full max-w-sm rounded-xl p-6 cosmic-glass border border-white/80 space-y-6">
+                            <div class="flex items-center justify-between border-b border-indigo-500/10 pb-4">
+                                <span class="text-[10px] font-mono tracking-widest text-indigo-600 uppercase font-bold">Profile Overview</span>
+                                <span class="text-[9px] font-mono bg-indigo-50 text-indigo-400 px-2 py-0.5 rounded border border-indigo-100">ARCHIVE.00</span>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                                    <span class="text-[10px] text-slate-500 font-bold block">STOVE INDE</span>
-                                    <span class="text-xl font-black text-slate-100 tracking-tight">1 건 <span class="text-xs font-medium text-emerald-400">출시</span></span>
-                                </div>
-                                <div class="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                                    <span class="text-[10px] text-slate-500 font-bold block">CORE METRIC</span>
-                                    <span class="text-xl font-black text-slate-100 tracking-tight">Excel <span class="text-xs font-medium text-teal-400">80%</span></span>
-                                </div>
+                            
+                            <div class="space-y-2 text-xs leading-relaxed text-slate-600 font-semibold">
+                                <p>
+                                    게임 콘텐츠 전공자로서 다양한 장르의 시스템 메커니즘을 심도 있게 분석해 왔습니다. 소프트웨어 품질관리 지식을 실무 프로세스에 이식하여, 상용 빌드의 예외 결함을 냉정하고 객관적인 데이터 분석을 통해 제어하는 역량을 기르고 있습니다.
+                                </p>
                             </div>
-                            <div class="space-y-3 pt-2">
-                                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Build Verification Pipeline</span>
-                                <div class="relative pl-4 border-l border-emerald-500/30 space-y-3 text-xs">
-                                    <div class="relative"><span class="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950"></span><p class="font-bold text-slate-300">기획 리스크 분석 및 TC 설계</p></div>
-                                    <div class="relative"><span class="absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full bg-teal-400 border-2 border-slate-950"></span><p class="font-bold text-slate-300">결함 아카이브 트래킹</p></div>
+
+                            <div class="grid grid-cols-2 gap-4 text-left border-t border-indigo-500/10 pt-4">
+                                <div class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100/60">
+                                    <span class="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">PROJECT STATE</span>
+                                    <span class="text-xs font-black text-slate-800 mt-1 block">스토브인디 정식 출시</span>
+                                </div>
+                                <div class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100/60">
+                                    <span class="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">CORE TRACKING</span>
+                                    <span class="text-xs font-black text-indigo-600 mt-1 block">Excel TC 설계 80%</span>
                                 </div>
                             </div>
                         </div>
@@ -175,106 +215,112 @@
                 </div>
             </div>
 
-            <!-- [섹션 1] ABOUT (과거 스크롤 깊이 1000px 뒤에 배치) -->
-            <div class="section-3d px-6 opacity-0" style="transform: translateZ(-1000px); z-index: 3;">
+            <!-- [섹션 1] ABOUT ME -->
+            <div class="section-3d px-8 opacity-0" style="transform: translateZ(-1200px); z-index: 3;">
                 <div class="max-w-4xl w-full space-y-8">
-                    <h2 class="text-2xl font-black tracking-tight text-emerald-400 uppercase">01 / ABOUT ME</h2>
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-widest">Identify</span>
+                        <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase">핵심 역량 및 리스크 정책</h2>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="glass-card p-8 rounded-2xl">
-                            <div class="flex items-center space-x-3 mb-5">
-                                <div class="w-7 h-7 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xs"><i class="fa-solid fa-square-terminal"></i></div>
-                                <h2 class="text-sm font-bold text-slate-200 tracking-wide uppercase">QA Core Competency</h2>
-                            </div>
-                            <ul class="space-y-3 text-xs font-semibold text-slate-400">
-                                <li class="flex items-start"><span class="text-emerald-400 mr-2">▪</span> <span>테스트케이스 설계 및 버그 리포트 프로세스 전공 역량</span></li>
-                                <li class="flex items-start"><span class="text-emerald-400 mr-2">▪</span> <span>감정을 배제하고 객관적 수치·로그 지표 기반의 결함 분석</span></li>
-                                <li class="flex items-start"><span class="text-emerald-400 mr-2">▪</span> <span>설정한 프로젝트 빌드 퀄리티 목표치를 끝까지 완수하는 책임감</span></li>
+                        <div class="cosmic-glass p-8 rounded-xl">
+                            <h3 class="text-sm font-bold text-indigo-900 tracking-wide mb-4 flex items-center space-x-2">
+                                <span class="w-1.5 h-3 bg-indigo-600 rounded-sm"></span>
+                                <span>QA Core Competency</span>
+                            </h3>
+                            <ul class="space-y-3.5 text-xs font-semibold text-slate-600 leading-relaxed">
+                                <li class="flex items-start"><span class="text-indigo-500 mr-2.5">▪</span><span>테스트케이스 설계 및 버그 리포트 프로세스 전공 역량</span></li>
+                                <li class="flex items-start"><span class="text-indigo-500 mr-2.5">▪</span><span>주관적 감정을 배제하고 오직 사실과 지표 기반 결함 식별</span></li>
+                                <li class="flex items-start"><span class="text-indigo-500 mr-2.5">▪</span><span>구축한 프로젝트 빌드 목표치를 타협 없이 끝까지 완수</span></li>
                             </ul>
                         </div>
-                        <div class="glass-card p-8 rounded-2xl">
-                            <div class="flex items-center space-x-3 mb-5">
-                                <div class="w-7 h-7 rounded bg-teal-500/10 flex items-center justify-center text-teal-400 text-xs"><i class="fa-solid fa-shield-halved"></i></div>
-                                <h2 class="text-sm font-bold text-slate-200 tracking-wide uppercase">Risk Management Policy</h2>
-                            </div>
-                            <ul class="space-y-3 text-xs font-semibold text-slate-400">
-                                <li class="flex items-start"><span class="text-teal-400 mr-2">▪</span> <span><strong>장점:</strong> 크리티컬 이슈 발생 시 핵심 원인 즉각 파악 및 대안 도출</span></li>
-                                <li class="flex items-start"><span class="text-amber-400 mr-2">▪</span> <span><strong>보완:</strong> 빠른 속도로 판단 시 발생하는 디테일 누수 사전 차단</span></li>
-                                <li class="flex items-start"><span class="text-emerald-400 mr-2">▪</span> <span><strong>대책:</strong> 최종 실행 전 <span class="text-emerald-400 font-bold">'의도적 교차 검증 검토 파이프라인'</span> 수립</span></li>
+                        <div class="cosmic-glass p-8 rounded-xl">
+                            <h3 class="text-sm font-bold text-indigo-900 tracking-wide mb-4 flex items-center space-x-2">
+                                <span class="w-1.5 h-3 bg-pink-500 rounded-sm"></span>
+                                <span>Risk Management Policy</span>
+                            </h3>
+                            <ul class="space-y-3.5 text-xs font-semibold text-slate-600 leading-relaxed">
+                                <li class="flex items-start"><span class="text-indigo-900 font-bold mr-2.5">장점 :</span><span>위기 상황 직면 시 핵심 이슈를 즉각 격리하고 대안 가이드 도출</span></li>
+                                <li class="flex items-start"><span class="text-slate-400 font-bold mr-2.5">보완 :</span><span>빠른 의사결정 시 간과될 수 있는 디테일 누수를 원천 차단</span></li>
+                                <li class="flex items-start"><span class="text-indigo-600 font-bold mr-2.5">대책 :</span><span>실행 전 의도적인 <span class="text-indigo-600 font-bold">'교차 검증 검토 파이프라인'</span>을 가동하여 검증</span></li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- [섹션 2] SKILLS (과거 스크롤 깊이 2000px 뒤에 배치) -->
-            <div class="section-3d px-6 opacity-0" style="transform: translateZ(-2000px); z-index: 2;">
+            <!-- [섹션 2] TECH STACK -->
+            <div class="section-3d px-8 opacity-0" style="transform: translateZ(-2400px); z-index: 2;">
                 <div class="max-w-4xl w-full space-y-8">
-                    <h2 class="text-2xl font-black tracking-tight text-emerald-400 uppercase">02 / TECH STACK</h2>
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-widest">Skillsets</span>
+                        <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase">Technical Stack</h2>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-slate-900/60 border border-white/5 p-6 rounded-xl">
+                        <div class="cosmic-glass p-6 rounded-xl">
                             <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs font-bold text-slate-300">Microsoft Excel</span>
-                                <span class="text-xs font-extrabold text-emerald-400">80%</span>
+                                <span class="text-xs font-bold text-slate-800">Microsoft Excel</span>
+                                <span class="text-xs font-extrabold text-indigo-600">80%</span>
                             </div>
-                            <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden"><div class="bg-emerald-400 h-full" style="width: 80%"></div></div>
-                            <p class="text-[11px] text-slate-500 mt-3 font-medium">테스트케이스 인덱싱 및 대규모 결함 트래킹 대시보드 조율</p>
+                            <div class="w-full bg-slate-200 h-[3px] rounded-full overflow-hidden"><div class="bg-indigo-600 h-full" style="width: 80%"></div></div>
+                            <p class="text-[11px] text-slate-500 mt-4 leading-relaxed font-semibold">테스트케이스 인덱싱 및 대규모 결함 트래킹 대시보드 인프라 수립</p>
                         </div>
-                        <div class="bg-slate-900/60 border border-white/5 p-6 rounded-xl">
+                        <div class="cosmic-glass p-6 rounded-xl">
                             <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs font-bold text-slate-300">PowerPoint</span>
-                                <span class="text-xs font-extrabold text-emerald-400">75%</span>
+                                <span class="text-xs font-bold text-slate-800">PowerPoint</span>
+                                <span class="text-xs font-extrabold text-indigo-600">75%</span>
                             </div>
-                            <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden"><div class="bg-emerald-400 h-full" style="width: 75%"></div></div>
-                            <p class="text-[11px] text-slate-500 mt-3 font-medium">아이디어 시각화 요약 및 직관적인 크로스 커뮤니케이션 문서 개발</p>
+                            <div class="w-full bg-slate-200 h-[3px] rounded-full overflow-hidden"><div class="bg-indigo-600 h-full" style="width: 75%"></div></div>
+                            <p class="text-[11px] text-slate-500 mt-4 leading-relaxed font-semibold">기획 구조화 요약 장표 및 직관적인 크로스 부서 소통용 문서 빌딩</p>
                         </div>
-                        <div class="bg-slate-900/60 border border-white/5 p-6 rounded-xl">
+                        <div class="cosmic-glass p-6 rounded-xl">
                             <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs font-bold text-slate-300">Unity (C#)</span>
-                                <span class="text-xs font-extrabold text-teal-400">70%</span>
+                                <span class="text-xs font-bold text-slate-800">Unity (C#)</span>
+                                <span class="text-xs font-extrabold text-pink-600">70%</span>
                             </div>
-                            <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden"><div class="bg-gradient-to-r from-teal-400 to-cyan-500 h-full" style="width: 70%"></div></div>
-                            <p class="text-[11px] text-slate-500 mt-3 font-medium">엔진 구조 이해도 기반 클라이언트 프로그래머와의 소통 비용 최소화</p>
+                            <div class="w-full bg-slate-200 h-[3px] rounded-full overflow-hidden"><div class="bg-pink-500 h-full" style="width: 70%"></div></div>
+                            <p class="text-[11px] text-slate-500 mt-4 leading-relaxed font-semibold">엔진 메커니즘 전반의 이해도 기반 클라이언트 프로그래머 소통 비용 축소</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- [섹션 3] EXPERIENCE & VISION (과거 스크롤 깊이 3000px 뒤에 배치) -->
-            <div class="section-3d px-6 opacity-0" style="transform: translateZ(-3000px); z-index: 1;">
+            <!-- [섹션 3] EXPERIENCE & VISION -->
+            <div class="section-3d px-8 opacity-0" style="transform: translateZ(-3600px); z-index: 1;">
                 <div class="max-w-4xl w-full space-y-8">
-                    <h2 class="text-2xl font-black tracking-tight text-emerald-400 uppercase">03 / PROJECT & VISION</h2>
-                    <div class="glass-card rounded-2xl p-6 md:p-8 relative overflow-hidden">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
-                            <div class="flex items-center space-x-4">
-                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-slate-950"><i class="fa-solid fa-gamepad text-lg"></i></div>
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded tracking-wider font-mono">LAUNCHED</span>
-                                        <span class="text-[10px] font-mono text-slate-400">2026.03 ~ 2026.06</span>
-                                    </div>
-                                    <h3 class="text-lg font-black text-slate-100">인디 게임 개발 및 정식 출시 프로젝트</h3>
-                                    <p class="text-xs text-slate-400 font-medium">역할: 메인 기획 · 시스템 개발 · 품질보증(QA)</p>
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-mono text-indigo-600 font-bold uppercase tracking-widest">Milestone</span>
+                        <h2 class="text-2xl font-black text-slate-900 tracking-tight uppercase">프로젝트 성과 및 비전</h2>
+                    </div>
+                    <div class="cosmic-glass rounded-xl p-6 md:p-8 relative overflow-hidden">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100 pb-6">
+                            <div class="space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-bold text-indigo-700 bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded font-mono">LAUNCHED</span>
+                                    <span class="text-[10px] font-mono text-slate-400">2026.03 ~ 2026.06</span>
                                 </div>
+                                <h3 class="text-lg font-black text-slate-800">인디 게임 개발 및 정식 출시 프로젝트</h3>
+                                <p class="text-xs text-slate-500 font-semibold">역할: 메인 기획 · 시스템 개발 · 품질보증(QA)</p>
                             </div>
                             <div>
-                                <a href="https://store.onstove.com/ko/games/104725" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-2 bg-slate-950 hover:bg-slate-900 text-slate-200 hover:text-emerald-400 text-xs font-bold px-4 py-3 rounded-xl border border-white/10 transition shadow-sm"><i class="fa-solid fa-store text-emerald-400"></i><span>스토브인디 상점가기</span></a>
+                                <a href="https://store.onstove.com/ko/games/104725" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-2 bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold px-4 py-2.5 rounded transition shadow-sm"><span>상점 바로가기</span></a>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 text-xs text-slate-400 leading-relaxed">
-                            <div class="bg-slate-900/40 p-4 rounded-xl border border-white/5">
-                                <h4 class="text-slate-200 font-bold mb-1">기획 변경 리스크 제어</h4>
-                                <p>리소스 부족 시 핵심 메커니즘 위주의 요약 장표 및 시각화 데이터를 빠르게 작성하여 팀 내 소통 비용 완벽 해소.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 text-xs text-slate-500 leading-relaxed">
+                            <div class="bg-indigo-50/40 p-4 rounded-lg border border-indigo-100">
+                                <h4 class="text-indigo-900 font-bold mb-1">기획 변경 리스크 제어</h4>
+                                <p class="font-semibold">리소스 제약에 대응하여 핵심 메커니즘 위주의 시각화 요약 장표를 신속히 수립해 팀 빌딩 내 소통 비용 해소.</p>
                             </div>
-                            <div class="bg-slate-900/40 p-4 rounded-xl border border-white/5">
-                                <h4 class="text-slate-200 font-bold mb-1">QA 체계 도입 공정 단축</h4>
-                                <p>결함 중요도 분류 프로세스 및 버그 로그 아카이브 시스템 구축을 통한 결함 수정 타임라인 단축 및 릴리즈 완수.</p>
+                            <div class="bg-indigo-50/40 p-4 rounded-lg border border-indigo-100">
+                                <h4 class="text-indigo-900 font-bold mb-1">QA 프레임워크 구축 공정 단축</h4>
+                                <p class="font-semibold">초기 빌드의 비효율을 진단하여 결합 우선순위 기준 정립 및 로그화 아카이브 도입. 디버깅 병목을 해결하여 정식 릴리즈 완료.</p>
                             </div>
                         </div>
                     </div>
-                    <!-- 지원 동기 한 문장 압축 박스 -->
-                    <div class="p-5 rounded-xl bg-slate-950/80 border border-emerald-500/20 text-center max-w-2xl mx-auto">
-                        <p class="text-xs text-slate-400 leading-relaxed font-medium">
-                            🚀 <span class="text-emerald-400 font-bold">Future Plan:</span> 데브시스터즈 고유 IP 가치를 보존하기 위해 적극적인 소통과 집요한 사전 빌드 검증으로 글로벌 라이브 서비스 무결성을 확보하는 파수꾼이 되겠습니다.
+                    <!-- 포부 박스 -->
+                    <div class="p-5 rounded-lg bg-white/90 border border-indigo-100 text-center max-w-2xl mx-auto shadow-sm">
+                        <p class="text-xs text-slate-600 leading-relaxed font-semibold">
+                            🚀 <span class="text-indigo-600 font-bold">Future Plan:</span> 데브시스터즈 고유 IP 가치를 보존하기 위해 적극적인 소통과 집요한 사전 빌드 검증으로 글로벌 라이브 서비스 무결성을 확보하는 파수꾼이 되겠습니다.
                         </p>
                     </div>
                 </div>
@@ -283,85 +329,67 @@
         </div>
     </div>
 
-    <!-- 푸터 고정 -->
-    <footer class="fixed bottom-0 left-0 w-full py-4 text-center text-[10px] text-slate-600 tracking-wider z-50">
+    <!-- 하단 라이선스 -->
+    <footer class="fixed bottom-0 left-0 w-full py-4 text-center text-[10px] text-slate-400 tracking-wider z-50">
         <p>&copy; 2026 Kim Sang Heon. All rights reserved.</p>
     </footer>
 
-    <!-- --- 줌인 인터랙션 핵심 스크립트 --- -->
+    <!-- --- 줌인 인터랙션 정밀 제어 스크립트 --- -->
     <script>
         let currentIdx = 0;
         const totalSections = 4;
-        const depthStep = 1000; // 섹션 간의 3D 공간 거리 (px)
+        const depthStep = 1200; 
         const space3d = document.getElementById('space3d');
         const sections = document.querySelectorAll('.section-3d');
         const navBtns = document.querySelectorAll('.nav-btn');
         let isMoving = false;
 
-        // 초기 화면 세팅 업데이트
         updateSectionVisibility();
 
-        // 휠 스크롤 이벤트 감지 리스너
         window.addEventListener('wheel', (e) => {
             if (isMoving) return;
-            
             if (e.deltaY > 0) {
-                // 휠 내림 -> 다음 섹션으로 대담하게 줌인
-                if (currentIdx < totalSections - 1) {
-                    currentIdx++;
-                    performZoom();
-                }
+                if (currentIdx < totalSections - 1) { currentIdx++; performZoom(); }
             } else {
-                // 휠 올림 -> 이전 섹션으로 리턴 줌아웃
-                if (currentIdx > 0) {
-                    currentIdx--;
-                    performZoom();
-                }
+                if (currentIdx > 0) { currentIdx--; performZoom(); }
             }
         });
 
-        // 실제 메인 무브먼트 연출 함수
         function performZoom() {
             isMoving = true;
-            
-            // 전체 3D 공간을 카메라 쪽으로 끌어당김 (Z축 음수축을 양수화)
             const targetZ = currentIdx * depthStep;
             space3d.style.transform = `translateZ(${targetZ}px)`;
-
             updateSectionVisibility();
-
-            // 애니메이션 러닝타임 동안 연속 트리거 차단
-            setTimeout(() => { isMoving = false; }, 1200);
+            setTimeout(() => { isMoving = false; }, 1300);
         }
 
-        // 특정 영역 다이렉트 워프 점프 함수 (네비게이션 클릭용)
         function zoomToSection(index) {
             if (isMoving || index === currentIdx) return;
             currentIdx = index;
             performZoom();
         }
 
-        // 최적화: 현재 보고 있는 화면 외에는 투명화 처리하여 가독성 강화
         function updateSectionVisibility() {
             sections.forEach((sec, i) => {
                 if (i === currentIdx) {
                     sec.style.opacity = '1';
+                    sec.style.filter = 'none';
                     sec.style.pointerEvents = 'auto';
                 } else {
                     sec.style.opacity = '0';
+                    sec.style.filter = 'blur(10px)'; 
                     sec.style.pointerEvents = 'none';
                 }
             });
 
-            // 네비게이션 액티브 링크 색상 처리 수정
             if(navBtns.length > 0) {
                 navBtns.forEach((btn, i) => {
                     if (i === currentIdx) {
-                        btn.classList.add('text-emerald-400');
-                        btn.classList.remove('text-slate-400');
+                        btn.classList.add('text-indigo-600');
+                        btn.classList.remove('text-slate-500');
                     } else {
-                        btn.classList.remove('text-emerald-400');
-                        btn.classList.add('text-slate-400');
+                        btn.classList.remove('text-indigo-600');
+                        btn.classList.add('text-slate-500');
                     }
                 });
             }
