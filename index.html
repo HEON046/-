@@ -1,902 +1,1376 @@
+<!-- 강화/던전/상점/창고 탭 구조 + 던전 PIP 미니뷰를 갖춘 전체 루프 프로토타입 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>김상헌 | 게임 QA 엔지니어</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<title>전체 루프 프로토타입</title>
+<style>
+  :root {
+    --bg: #14100c;
+    --panel: #241c16;
+    --panel2: #2c221a;
+    --ember: #ff6a2b;
+    --ember-dim: #7a3a18;
+    --text: #e8ddd0;
+    --sub: #a89680;
+    --success: #6fbf5c;
+    --fail: #999;
+    --destroy: #c94f4f;
+    --gold: #e0b84a;
+    --enchant: #7cc4e8;
+    --junk: #b98fd9;
+    --hp: #c94f4f;
+    --boss: #d24fc9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: "Malgun Gothic", sans-serif;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,106,43,0.22), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 15% 85%, rgba(255,140,60,0.14), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 85% 85%, rgba(255,140,60,0.10), transparent 70%),
+      linear-gradient(180deg, rgba(10,8,6,0.82) 0%, rgba(16,12,9,0.88) 45%, rgba(8,6,4,0.92) 100%),
+      url("assets/blacksmith-bg.png");
+    background-size: auto, auto, auto, auto, cover;
+    background-position: center, center, center, center, center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    position: relative;
+  }
+  body::before {
+    content: "⚒";
+    position: fixed;
+    left: 50%;
+    bottom: -40px;
+    transform: translateX(-50%);
+    font-size: 320px;
+    color: rgba(255, 106, 43, 0.04);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #app { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 26px 16px 60px; }
+  h1 { color: var(--ember); font-size: 19px; margin: 0 0 14px; }
 
-    :root {
-      --bg:        #ffffff;
-      --surface:   #f9f9f9;
-      --border:    #eeeeee;
-      --text:      #1a1a1a;
-      --muted:     #666666;
-      --light:     #999999;
-      --accent:    #2563eb;
-      --green:     #16a34a;
-      --radius:    8px;
-      --shadow:    0 1px 4px rgba(0, 0, 0, 0.07);
-      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.09);
-    }
+  #goldBar { position: relative; font-size: 14px; color: var(--gold); font-weight: bold; margin-bottom: 14px; }
 
-    html { scroll-behavior: smooth; }
+  @keyframes gainPopUp {
+    0% { transform: translate(-50%, 0); opacity: 1; }
+    100% { transform: translate(-50%, -26px); opacity: 0; }
+  }
+  .gainPop {
+    position: absolute;
+    left: 50%;
+    top: -6px;
+    font-size: 13px;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: gainPopUp 0.9s ease-out forwards;
+  }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif;
-      line-height: 1.7;
-      font-size: 16px;
-      -webkit-font-smoothing: antialiased;
-    }
+  /* ===== 이펙트 (강화 성공/실패/파괴, 던전 클리어/실패, 공격 타격) ===== */
+  @keyframes fxShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes fxGlow {
+    0% { text-shadow: 0 0 0 currentColor; }
+    30% { text-shadow: 0 0 16px currentColor; }
+    100% { text-shadow: 0 0 0 currentColor; }
+  }
+  @keyframes fxFade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes fxPopText {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    25% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    60% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -70%) scale(1); opacity: 0; }
+  }
+  @keyframes fxParticle {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+  }
+  @keyframes fxHit {
+    0% { filter: brightness(1); transform: scale(1); }
+    30% { filter: brightness(2.2); transform: scale(0.9); }
+    100% { filter: brightness(1); transform: scale(1); }
+  }
+  .fxShake { animation: fxShake 0.4s ease; }
+  .fxGlow { animation: fxGlow 0.6s ease; color: var(--gold); }
+  .fxHit { animation: fxHit 0.2s ease; }
+  .fxOverlay { position: absolute; inset: 0; pointer-events: none; animation: fxFade 0.6s ease forwards; }
+  .fxOverlaySuccess { background: radial-gradient(circle, rgba(224,184,74,0.45), transparent 70%); }
+  .fxOverlayFail { background: rgba(150,140,128,0.28); }
+  .fxOverlayDestroy { background: radial-gradient(circle, rgba(201,79,79,0.55), transparent 70%); }
+  .fxPopText { position: absolute; left: 50%; top: 42%; font-size: 20px; font-weight: bold; white-space: nowrap; pointer-events: none; animation: fxPopText 0.9s ease forwards; }
+  .fxParticle { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; animation: fxParticle 0.7s ease-out forwards; }
 
-    a { color: inherit; text-decoration: none; }
+  #tabBar { display: flex; gap: 6px; margin-bottom: 16px; background: var(--panel); border: 1px solid var(--ember-dim); border-radius: 8px; padding: 4px; }
+  .tabBtn { background: transparent; border: none; color: var(--sub); padding: 8px 18px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+  .tabBtn.active { background: var(--ember); color: #1a1410; }
 
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  #tabContent { width: 380px; }
+  .tabPanel { position: relative; overflow: hidden; display: none; background: var(--panel); border: 1px solid var(--ember-dim); border-radius: 8px; padding: 22px 26px; text-align: center; }
+  .tabPanel.active { display: block; }
 
-    /* ─── Nav ─── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0 10%; height: 64px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo { font-size: 0.9rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
-    .nav-links { display: flex; gap: 2.5rem; }
-    .nav-links a { font-size: 0.82rem; font-weight: 500; color: var(--muted); transition: color 0.15s; }
-    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+  .panelTitle { font-size: 13px; color: var(--sub); letter-spacing: 2px; margin-bottom: 12px; }
+  #weaponName { position: relative; font-size: 21px; font-weight: bold; margin-bottom: 4px; }
+  #weaponName.plus { color: var(--ember); }
+  #stats { font-size: 13px; margin-bottom: 10px; }
+  #rates { font-size: 12px; color: var(--sub); margin-bottom: 10px; line-height: 1.5; }
+  #enhanceCost { font-size: 12px; color: var(--sub); margin-bottom: 10px; }
 
-    /* ─── Layout ─── */
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 10%; }
-    section { padding: 110px 0; }
-    hr { border: none; border-top: 1px solid var(--border); }
+  button {
+    background: var(--ember);
+    color: #1a1410;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button.secondary { background: transparent; border: 1px solid var(--ember-dim); color: var(--text); }
+  button:disabled { background: var(--ember-dim); cursor: default; color: #6b5a49; }
+  button.small { padding: 5px 10px; font-size: 11px; }
+  select {
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid var(--ember-dim);
+    border-radius: 6px;
+    padding: 7px;
+    font-size: 12px;
+    width: 100%;
+    margin: 6px 0;
+  }
+  .btnRow { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .log { margin-top: 12px; font-size: 12px; min-height: 18px; }
+  .success { color: var(--success); }
+  .fail { color: var(--fail); }
+  .destroy { color: var(--destroy); font-weight: bold; }
+  .kill { color: var(--gold); }
+  .timeout { color: var(--destroy); }
 
-    .section-eyebrow {
-      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
-      text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
-    }
-    .section-title {
-      font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 800;
-      line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 0.65rem;
-    }
-    .section-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 3.5rem; }
+  details { text-align: left; background: var(--panel2); border: 1px solid var(--ember-dim); border-radius: 6px; margin-bottom: 8px; padding: 8px 10px; }
+  summary { cursor: pointer; font-size: 13px; font-weight: bold; color: var(--ember); }
+  .itemRow { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #3a2c20; }
+  .itemRow:last-child { border-bottom: none; }
+  .stashRow { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #3a2c20; font-size: 12px; }
 
-    /* ─── Buttons ─── */
-    .btn {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.75rem 1.75rem; border-radius: var(--radius);
-      font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none;
-      transition: all 0.15s;
-    }
-    .btn-accent { background: var(--accent); color: #fff; }
-    .btn-accent:hover { background: #1d4ed8; }
-    .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
-    .btn-ghost:hover { border-color: #aaaaaa; }
+  /* 던전 공통(전체 탭 + PIP 공유 스타일) */
+  #stageName { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+  #stageName.boss { color: var(--boss); }
+  #bossNote { font-size: 11px; color: var(--boss); margin-bottom: 6px; min-height: 14px; }
+  #hpText { font-size: 11px; color: var(--sub); margin-bottom: 6px; }
+  #hpBarOuter { background: #3a2c20; border-radius: 6px; height: 14px; width: 100%; overflow: hidden; margin-bottom: 10px; }
+  #hpBarInner { background: var(--hp); height: 100%; width: 100%; transition: width 0.1s; }
+  #timeText { font-size: 11px; color: var(--sub); margin-bottom: 4px; }
+  #timeBarOuter { background: #3a2c20; border-radius: 6px; height: 8px; width: 100%; overflow: hidden; margin-bottom: 14px; }
+  #timeBarInner { background: var(--enchant); height: 100%; width: 0%; transition: width 0.1s linear; }
+  #timeBarInner.warn { background: var(--destroy); }
+  #monster { position: relative; margin-bottom: 6px; display: flex; justify-content: center; }
+  .iconMonster { width: 64px; height: 64px; }
+  .iconMonsterSmall { width: 40px; height: 40px; vertical-align: middle; }
+  .iconCard { width: 28px; height: 28px; vertical-align: middle; margin-right: 4px; }
+  .iconWeapon { width: 26px; height: 26px; vertical-align: middle; margin-right: 6px; }
+  .iconLocked { filter: grayscale(1) brightness(0.6); opacity: 0.5; }
+  #toggleBtn.stop { background: var(--ember-dim); color: var(--text); }
+  #maxClearedText { font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+  #failArea select { width: auto; }
 
-    /* ─── Hero ─── */
-    #hero {
-      min-height: 100vh;
-      display: flex; flex-direction: column; justify-content: center;
-      padding-top: 64px;
-    }
-    .hero-inner {
-      display: grid;
-      grid-template-columns: 1fr 360px;
-      gap: 5rem;
-      align-items: center;
-    }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      border: 1px solid var(--border); border-radius: 4px;
-      padding: 0.3rem 0.9rem; margin-bottom: 2rem; width: fit-content;
-    }
-    .hero-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .hero-badge span { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
-
-    .hero-name {
-      font-size: clamp(3.5rem, 6vw, 5.5rem);
-      font-weight: 900; line-height: 1; letter-spacing: -0.035em; margin-bottom: 1.5rem;
-    }
-    .hero-tagline {
-      font-size: 1.1rem; color: var(--muted);
-      margin-bottom: 2.25rem; line-height: 1.8;
-    }
-    .hero-tagline strong { color: var(--text); font-weight: 700; }
-
-    .hero-bullets {
-      list-style: none; margin-bottom: 2.75rem;
-      display: flex; flex-direction: column; gap: 0.75rem;
-    }
-    .hero-bullets li {
-      display: flex; align-items: flex-start; gap: 0.75rem;
-      font-size: 0.9rem; color: var(--muted); line-height: 1.6;
-    }
-    .bullet-check {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #eff6ff; border: 1.5px solid var(--accent);
-      flex-shrink: 0; margin-top: 2px;
-      color: var(--accent); font-size: 10px; font-weight: 800;
-    }
-    .bullet-text strong { color: var(--text); font-weight: 600; }
-
-    .hero-cta { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 3.5rem; }
-
-    .hero-stats {
-      display: flex; gap: 0;
-      border-top: 1px solid var(--border); padding-top: 2rem;
-    }
-    .hero-stat {
-      flex: 1; padding-right: 2rem;
-      border-right: 1px solid var(--border);
-      margin-right: 2rem;
-    }
-    .hero-stat:last-child { border-right: none; margin-right: 0; padding-right: 0; }
-    .stat-num { font-size: 2rem; font-weight: 900; color: var(--text); line-height: 1; letter-spacing: -0.03em; }
-    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
-
-    /* Hero right card */
-    .hero-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 2rem;
-      box-shadow: var(--shadow);
-    }
-    .hero-card-title {
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--light); margin-bottom: 1.5rem;
-    }
-    .hci {
-      display: flex; flex-direction: column; gap: 0;
-    }
-    .hci-row {
-      display: flex; flex-direction: column; gap: 0.2rem;
-      padding: 1rem 0; border-bottom: 1px solid var(--border);
-    }
-    .hci-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .hci-row:first-child { padding-top: 0; }
-    .hci-key { font-size: 0.7rem; color: var(--light); font-weight: 500; }
-    .hci-val { font-size: 0.88rem; font-weight: 700; color: var(--text); }
-    .hci-badge {
-      display: inline-block; font-size: 0.72rem; font-weight: 700;
-      padding: 0.2rem 0.65rem; border-radius: 4px;
-      background: #eff6ff; color: var(--accent); border: 1px solid #bfdbfe;
-      width: fit-content;
-    }
-
-    /* ─── Projects ─── */
-    .projects-list { display: flex; flex-direction: column; gap: 1.5rem; }
-    .project-card {
-      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-      box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .project-card:hover { border-color: #cccccc; box-shadow: var(--shadow-md); }
-    .project-inner { padding: 2.25rem 2.5rem; display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: start; }
-    .project-type {
-      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
-    }
-    .project-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 0.65rem; letter-spacing: -0.01em; }
-    .project-desc { font-size: 0.875rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.8; }
-
-    .project-meta {
-      display: grid; grid-template-columns: auto 1fr; gap: 0.45rem 1.5rem;
-      align-items: baseline; margin-bottom: 1.5rem;
-      background: var(--surface); border-radius: 6px; padding: 1rem 1.25rem;
-    }
-    .meta-key { font-size: 0.72rem; color: var(--light); font-weight: 500; white-space: nowrap; }
-    .meta-val { font-size: 0.85rem; color: var(--text); font-weight: 600; }
-
-    .tag-stack { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .tag {
-      font-size: 0.7rem; font-weight: 500; padding: 0.22rem 0.65rem;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px; color: var(--muted);
-    }
-    .tag-blue {
-      font-size: 0.7rem; font-weight: 600; padding: 0.22rem 0.65rem;
-      background: #eff6ff; border: 1px solid #bfdbfe;
-      border-radius: 4px; color: var(--accent);
-    }
-    .proj-right { flex-shrink: 0; }
-    .proj-btn {
-      display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;
-      font-size: 0.82rem; font-weight: 600; color: var(--accent);
-      padding: 0.55rem 1.1rem; border: 1px solid var(--accent);
-      border-radius: var(--radius); transition: all 0.15s;
-    }
-    .proj-btn:hover { background: var(--accent); color: #fff; }
-
-    /* ─── Strengths ─── */
-    .strengths-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
-    .strength-card {
-      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 2rem; box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .strength-card:hover { border-color: #cccccc; box-shadow: var(--shadow-md); }
-    .strength-icon {
-      width: 42px; height: 42px; border-radius: 8px;
-      background: #eff6ff; border: 1px solid #bfdbfe;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.15rem; margin-bottom: 1.1rem;
-    }
-    .strength-title { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.6rem; letter-spacing: -0.01em; }
-    .strength-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.75; }
-    .strength-qa-tag {
-      display: inline-block; margin-top: 1rem;
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em;
-      color: var(--accent); background: #eff6ff; border: 1px solid #bfdbfe;
-      padding: 0.2rem 0.6rem; border-radius: 4px;
-    }
-
-    /* ─── Skills ─── */
-    .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.1rem; }
-    .skill-card {
-      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 1.5rem; box-shadow: var(--shadow); transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .skill-card:hover { border-color: #cccccc; box-shadow: var(--shadow-md); }
-    .skill-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .skill-name { font-size: 0.9rem; font-weight: 700; }
-    .skill-level {
-      font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem;
-      border-radius: 4px; letter-spacing: 0.04em;
-    }
-    .level-high  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-    .level-mid   { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-    .level-learn { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
-
-    .skill-bar { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: 0.8rem; }
-    .skill-fill { height: 100%; border-radius: 99px; width: 0; transition: width 1s cubic-bezier(.4,0,.2,1); }
-    .fill-accent { background: var(--accent); }
-    .fill-green  { background: var(--green); }
-
-    .skill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-
-    /* ─── Timeline ─── */
-    .timeline { display: flex; flex-direction: column; max-width: 720px; }
-    .tl-item { display: flex; gap: 2.25rem; padding-bottom: 2.75rem; }
-    .tl-item:last-child { padding-bottom: 0; }
-    .tl-left { display: flex; flex-direction: column; align-items: center; width: 12px; flex-shrink: 0; }
-    .tl-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      border: 2px solid var(--accent); background: var(--bg);
-      flex-shrink: 0; margin-top: 0.45rem;
-    }
-    .tl-line { width: 1px; flex: 1; background: var(--border); margin-top: 6px; }
-    .tl-item:last-child .tl-line { display: none; }
-    .tl-body { flex: 1; }
-    .tl-period { font-size: 0.72rem; font-weight: 700; color: var(--accent); margin-bottom: 0.3rem; letter-spacing: 0.06em; }
-    .tl-role { font-size: 1rem; font-weight: 800; margin-bottom: 0.15rem; }
-    .tl-org { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; font-weight: 500; }
-    .tl-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.75; }
-    .tl-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.75rem; }
-
-    /* ─── About ─── */
-    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start; }
-    .about-text p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.1rem; line-height: 1.85; }
-    .info-list {
-      display: flex; flex-direction: column; gap: 0.6rem;
-      margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--border);
-    }
-    .info-row { display: flex; gap: 1.5rem; font-size: 0.875rem; }
-    .info-k { color: var(--light); min-width: 52px; font-weight: 500; }
-    .info-v { color: var(--text); font-weight: 600; }
-
-    .trait-list { display: flex; flex-direction: column; }
-    .trait-item { padding: 1.25rem 0; border-bottom: 1px solid var(--border); }
-    .trait-item:first-child { border-top: 1px solid var(--border); }
-    .trait-k { font-size: 0.68rem; font-weight: 700; color: var(--light); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
-    .trait-v { font-size: 0.92rem; font-weight: 700; color: var(--text); margin-bottom: 0.2rem; }
-    .trait-sub { font-size: 0.8rem; color: var(--muted); }
-
-    /* ─── Contact ─── */
-    #contact { text-align: center; }
-    .contact-inner {
-      max-width: 560px; margin: 0 auto;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 4rem 3rem; box-shadow: var(--shadow);
-    }
-    .contact-inner p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .contact-email { font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: 2rem; }
-
-    /* ─── Intro ─── */
-    .intro-wrap {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start;
-    }
-    .intro-headline {
-      font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
-      line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 1.5rem;
-    }
-    .intro-body { font-size: 0.95rem; color: var(--muted); line-height: 1.85; }
-    .intro-highlights { display: flex; flex-direction: column; }
-    .ih {
-      padding: 1.5rem 0; border-bottom: 1px solid var(--border);
-      display: grid; grid-template-columns: 36px 1fr; gap: 0 1rem; align-items: start;
-    }
-    .ih:first-child { border-top: 1px solid var(--border); }
-    .ih-num { font-size: 0.68rem; font-weight: 800; color: var(--accent); letter-spacing: 0.06em; padding-top: 0.2rem; }
-    .ih-title { font-size: 0.92rem; font-weight: 700; margin-bottom: 0.3rem; }
-    .ih-desc { grid-column: 2; font-size: 0.82rem; color: var(--muted); line-height: 1.65; }
-
-    /* ─── Footer ─── */
-    footer {
-      text-align: center; padding: 2rem 10%;
-      border-top: 1px solid var(--border);
-      color: var(--light); font-size: 0.78rem;
-    }
-
-    /* ─── Fade-in ─── */
-    .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
-    .fade-in.visible { opacity: 1; transform: translateY(0); }
-
-    /* ─── Responsive ─── */
-    @media (max-width: 960px) {
-      .hero-inner { grid-template-columns: 1fr; gap: 3rem; }
-      .hero-card { display: none; }
-      .strengths-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 768px) {
-      .container { padding: 0 6%; }
-      nav { padding: 0 6%; }
-      .intro-wrap { grid-template-columns: 1fr; gap: 2.5rem; }
-      .nav-links { gap: 1.5rem; }
-      .hero-name { font-size: clamp(2.8rem, 12vw, 4rem); }
-      .about-grid { grid-template-columns: 1fr; gap: 3rem; }
-      .project-inner { grid-template-columns: 1fr; }
-      .proj-right { display: none; }
-    }
-  </style>
+  /* PIP 미니 던전 뷰 (유튜브 PIP처럼 다른 탭을 보는 동안 계속 표시) */
+  #pip {
+    position: fixed;
+    width: 480px;
+    height: 270px;
+    min-width: 280px;
+    min-height: 170px;
+    max-width: 820px;
+    max-height: 520px;
+    background: var(--panel);
+    border: 2px solid var(--ember);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    padding: 14px 18px;
+    z-index: 10;
+    display: none;
+    resize: both;    /* 우하단 모서리를 끌어서 자유롭게 크기 조절 */
+    overflow: auto;
+  }
+  #pip.dragging { opacity: 0.85; box-shadow: 0 12px 32px rgba(0,0,0,0.7); }
+  #pip .pipHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--sub);
+    margin-bottom: 6px;
+    cursor: grab;
+    user-select: none;
+  }
+  #pip .pipHead:active { cursor: grabbing; }
+  #pip .pipStage { position: relative; font-size: 14px; font-weight: bold; }
+  #pip .pipStage.boss { color: var(--boss); }
+  #pip button { padding: 6px 12px; font-size: 12px; }
+  #pip select { width: 100%; }
+</style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-  <div class="nav-logo">김상헌</div>
-  <div class="nav-links">
-    <a href="#projects">프로젝트</a>
-    <a href="#strengths">강점</a>
-    <a href="#skills">기술</a>
-    <a href="#experience">경력</a>
-    <a href="#contact">연락</a>
+<!-- 손으로 그린 벡터 아이콘 모음. fill="currentColor"라 색은 쓰는 쪽에서 정한다. -->
+<svg style="display:none;">
+<defs>
+
+  <symbol id="icon-rabbit" viewBox="0 0 64 64" fill="currentColor">
+    <ellipse cx="30" cy="18" rx="4" ry="13"/>
+    <ellipse cx="40" cy="18" rx="4" ry="13"/>
+    <circle cx="34" cy="38" r="13"/>
+    <ellipse cx="34" cy="54" rx="15" ry="10"/>
+    <circle cx="52" cy="52" r="4"/>
+  </symbol>
+
+  <symbol id="icon-bear" viewBox="0 0 64 64" fill="currentColor">
+    <circle cx="20" cy="18" r="7"/>
+    <circle cx="44" cy="18" r="7"/>
+    <circle cx="32" cy="32" r="16"/>
+    <ellipse cx="32" cy="52" rx="20" ry="12"/>
+    <circle cx="32" cy="36" r="6" fill="#00000030"/>
+  </symbol>
+
+  <symbol id="icon-wolf" viewBox="0 0 64 64" fill="currentColor">
+    <polygon points="18,10 26,26 12,26"/>
+    <polygon points="46,10 38,26 52,26"/>
+    <ellipse cx="32" cy="32" rx="15" ry="13"/>
+    <polygon points="32,38 24,50 40,50"/>
+    <ellipse cx="30" cy="56" rx="18" ry="8"/>
+  </symbol>
+
+  <symbol id="icon-wolfboss" viewBox="0 0 64 64" fill="currentColor">
+    <polygon points="16,6 26,26 10,24"/>
+    <polygon points="48,6 38,26 54,24"/>
+    <ellipse cx="32" cy="30" rx="17" ry="15"/>
+    <polygon points="32,38 22,52 42,52"/>
+    <ellipse cx="30" cy="58" rx="20" ry="8"/>
+    <polygon points="24,10 28,20 20,18"/>
+    <polygon points="40,10 36,20 44,18"/>
+  </symbol>
+
+  <symbol id="icon-boar" viewBox="0 0 64 64" fill="currentColor">
+    <ellipse cx="32" cy="34" rx="18" ry="14"/>
+    <circle cx="14" cy="20" r="5"/>
+    <circle cx="50" cy="20" r="5"/>
+    <ellipse cx="32" cy="52" rx="20" ry="9"/>
+    <polygon points="24,40 20,48 28,44" fill="#f4ead6"/>
+    <polygon points="40,40 44,48 36,44" fill="#f4ead6"/>
+  </symbol>
+
+  <symbol id="icon-boarboss" viewBox="0 0 64 64" fill="currentColor">
+    <ellipse cx="32" cy="32" rx="20" ry="16"/>
+    <circle cx="12" cy="16" r="6"/>
+    <circle cx="52" cy="16" r="6"/>
+    <ellipse cx="32" cy="54" rx="22" ry="9"/>
+    <polygon points="22,42 15,54 28,46" fill="#f4ead6"/>
+    <polygon points="42,42 49,54 36,46" fill="#f4ead6"/>
+  </symbol>
+
+  <symbol id="icon-bat" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M32 26 C18 8, 2 14, 8 30 C14 30, 20 26, 26 34 Z"/>
+    <path d="M32 26 C46 8, 62 14, 56 30 C50 30, 44 26, 38 34 Z"/>
+    <circle cx="32" cy="34" r="10"/>
+    <polygon points="28,26 32,32 36,26"/>
+  </symbol>
+
+  <symbol id="icon-spider" viewBox="0 0 64 64" fill="currentColor">
+    <circle cx="32" cy="30" r="13"/>
+    <circle cx="32" cy="46" r="8"/>
+    <path d="M22 24 L4 14 M20 30 L2 30 M22 36 L6 46 M42 24 L60 14 M44 30 L62 30 M42 36 L58 46" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="icon-rat" viewBox="0 0 64 64" fill="currentColor">
+    <circle cx="18" cy="20" r="6"/>
+    <circle cx="34" cy="18" r="6"/>
+    <ellipse cx="30" cy="36" rx="16" ry="12"/>
+    <polygon points="14,38 2,32 12,46"/>
+    <path d="M46 40 C58 42, 60 54, 50 56" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="icon-snakequeen" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M10 54 C18 40, 2 32, 14 20 C22 12, 36 16, 34 26 C32 34, 46 34, 46 24" stroke="currentColor" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <circle cx="47" cy="20" r="9"/>
+    <polygon points="40,6 43,14 46,6"/>
+    <polygon points="47,4 50,13 53,5"/>
+    <polygon points="54,6 56,14 59,7"/>
+  </symbol>
+
+  <symbol id="icon-salamander" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M6 46 C16 30, 30 44, 40 30 C46 22, 54 24, 58 16" stroke="currentColor" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <circle cx="58" cy="14" r="8"/>
+    <polygon points="52,4 55,10 58,4"/>
+    <polygon points="60,3 62,10 65,4"/>
+  </symbol>
+
+  <symbol id="icon-dragon" viewBox="0 0 64 64" fill="currentColor">
+    <path d="M4 40 C14 44, 20 32, 30 36 C40 40, 44 26, 54 30" stroke="currentColor" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <circle cx="54" cy="26" r="10"/>
+    <polygon points="46,8 50,18 40,16"/>
+    <polygon points="60,8 58,18 68,14"/>
+    <path d="M20 30 L10 14 L26 22 Z"/>
+    <polygon points="6,42 -2,50 8,52" transform="translate(4,0)"/>
+  </symbol>
+
+  <symbol id="icon-sword" viewBox="0 0 64 64" fill="currentColor">
+    <polygon points="34,2 40,2 40,38 34,38"/>
+    <polygon points="37,2 46,14 37,14"/>
+    <rect x="22" y="38" width="20" height="7" rx="2"/>
+    <rect x="34" y="45" width="6" height="16" rx="2"/>
+    <circle cx="37" cy="61" r="4"/>
+  </symbol>
+
+</defs>
+</svg>
+
+<div id="app">
+  <h1>무기강화게임 — 전체 루프 프로토타입</h1>
+  <div id="goldBar">골드: <span id="goldCount">0</span></div>
+
+  <div id="tabBar">
+    <button class="tabBtn active" onclick="setTab('enhance')">강화</button>
+    <button class="tabBtn" onclick="setTab('dungeon')">던전</button>
+    <button class="tabBtn" onclick="setTab('shop')">상점</button>
+    <button class="tabBtn" onclick="setTab('stash')">창고</button>
+    <button class="tabBtn" onclick="setTab('compendium')">도감</button>
   </div>
-</nav>
 
-<!-- ─── Hero ─── -->
-<section id="hero">
-  <div class="container">
-    <div class="hero-inner">
+  <div id="tabContent">
 
-      <!-- Left -->
-      <div>
-        <div class="hero-badge fade-in">
-          <span class="dot"></span>
-          <span>게임 QA 엔지니어 지원</span>
-        </div>
-        <h1 class="hero-name fade-in">김상헌</h1>
-        <p class="hero-tagline fade-in">
-          게임의 <strong>완성도를 끝까지 책임지는</strong> QA 엔지니어.<br>
-          버그 하나도 그냥 지나치지 않겠다는 마음으로 임합니다.
-        </p>
+    <!-- 강화 탭 -->
+    <div class="tabPanel active" id="tab-enhance">
+      <div class="panelTitle">대장간 — 강화</div>
+      <div id="weaponName"></div>
+      <div id="stats"></div>
 
-        <ul class="hero-bullets fade-in">
-          <li>
-            <span class="bullet-check">✓</span>
-            <span class="bullet-text"><strong>스토브 인디 정식 출시 게임</strong> QA 직접 참여 (2026)</span>
-          </li>
-          <li>
-            <span class="bullet-check">✓</span>
-            <span class="bullet-text">테스트 수행 · 버그 리포팅 · 재현 검증 경험</span>
-          </li>
-          <li>
-            <span class="bullet-check">✓</span>
-            <span class="bullet-text"><strong>SW 품질관리</strong> 전공 과정 이수 (유한대학교 게임콘텐츠)</span>
-          </li>
-          <li>
-            <span class="bullet-check">✓</span>
-            <span class="bullet-text">꼼꼼함 · 끈기 · 완벽주의 — QA에 딱 맞는 성격</span>
-          </li>
-        </ul>
-
-        <div class="hero-cta fade-in">
-          <a href="#projects" class="btn btn-accent">프로젝트 보기</a>
-          <a href="#contact" class="btn btn-ghost">연락하기</a>
-        </div>
-
-        <div class="hero-stats fade-in">
-          <div class="hero-stat">
-            <div class="stat-num">2</div>
-            <div class="stat-label">QA 참여 프로젝트</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-num">1</div>
-            <div class="stat-label">정식 출시 게임</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-num">4</div>
-            <div class="stat-label">최대 협업 인원</div>
-          </div>
-        </div>
+      <div id="noWeaponArea" style="display:none;">
+        <div style="color:var(--destroy); font-size:13px; margin-bottom:10px;">무기가 파괴되었다.</div>
+        <button onclick="issueNewWeapon()">새 무기 받기</button>
       </div>
 
-      <!-- Right card -->
-      <div class="hero-card fade-in">
-        <div class="hero-card-title">지원자 요약</div>
-        <div class="hci">
-          <div class="hci-row">
-            <span class="hci-key">지원 포지션</span>
-            <span class="hci-badge">게임 QA 엔지니어</span>
-          </div>
-          <div class="hci-row">
-            <span class="hci-key">출시 게임 QA</span>
-            <span class="hci-val">스토브 인디 (2026.06)</span>
-          </div>
-          <div class="hci-row">
-            <span class="hci-key">QA 활동</span>
-            <span class="hci-val">테스트 수행 · 버그 리포팅 · 재현 검증</span>
-          </div>
-          <div class="hci-row">
-            <span class="hci-key">전공</span>
-            <span class="hci-val">유한대학교 게임콘텐츠 전공</span>
-          </div>
-          <div class="hci-row">
-            <span class="hci-key">이수 과목</span>
-            <span class="hci-val">SW 품질관리</span>
-          </div>
-          <div class="hci-row">
-            <span class="hci-key">핵심 성향</span>
-            <span class="hci-val">꼼꼼함 · 끈기 · 완벽주의</span>
-          </div>
-        </div>
+      <div id="enhanceArea">
+        <div id="rates"></div>
+        <div id="enhanceCost"></div>
+        <button id="enhanceBtn" onclick="tryEnhanceEquip()">합성 강화</button>
       </div>
 
+      <details style="margin-top:16px;">
+        <summary>철 파편으로 0강 무기 제작</summary>
+        <div style="margin-top:8px; font-size:12px; color:var(--sub);">철 파편 <span id="enchantCountA">0</span>개 보유 (제작에 <span id="craftCostText"></span>개 필요)</div>
+        <div class="btnRow" style="margin-top:8px;">
+          <button id="craftBtn" onclick="craftWeapon()">0강 무기 제작</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>창고 재료끼리 합성 (장착 무기와 별개)</summary>
+        <select id="mergeSelect"></select>
+        <div class="btnRow">
+          <button id="mergeBtn" onclick="mergeSelectedStash()">합성 시도</button>
+        </div>
+      </details>
+
+      <div class="log" id="enhanceLog"></div>
     </div>
+
+    <!-- 던전 탭 (전체 화면) -->
+    <div class="tabPanel" id="tab-dungeon">
+      <div class="panelTitle">던전</div>
+      <div id="maxClearedText"></div>
+
+      <div id="failArea" style="display:none;">
+        <div style="color:var(--destroy); font-size:13px; margin-bottom:6px;">던전 실패...</div>
+        <div style="font-size:12px; color:var(--sub);">어디서부터 다시 시작할까?</div>
+        <select id="checkpointSelect"></select>
+        <div class="btnRow">
+          <button onclick="startFromStage('checkpointSelect')">이 스테이지부터 시작</button>
+        </div>
+      </div>
+
+      <details id="jumpArea" style="display:none; margin-bottom:12px;">
+        <summary>스테이지 이동 (자동 입장)</summary>
+        <select id="jumpSelect" style="margin-top:8px;"></select>
+        <div class="btnRow" style="margin-top:8px;">
+          <button onclick="jumpToStage('jumpSelect')">이동 + 자동 전투 시작</button>
+        </div>
+      </details>
+
+      <div id="battleArea">
+        <div id="stageName"></div>
+        <div id="bossNote"></div>
+        <div id="hpText"></div>
+        <div id="hpBarOuter"><div id="hpBarInner"></div></div>
+        <div id="timeText"></div>
+        <div id="timeBarOuter"><div id="timeBarInner"></div></div>
+        <div id="monster"><span id="monsterIconWrap"></span></div>
+        <div id="monsterNameLabel" style="font-size:13px; color:var(--sub); margin:-4px 0 10px;"></div>
+        <button id="toggleBtn" onclick="toggleBattle()">전투 시작</button>
+      </div>
+
+      <div class="log" id="dungeonLog"></div>
+    </div>
+
+    <!-- 상점 탭 -->
+    <div class="tabPanel" id="tab-shop">
+      <div class="panelTitle">상점</div>
+
+      <div style="font-size:13px; margin-bottom:14px;">0강 무기 구매</div>
+      <div class="btnRow">
+        <button id="buyBtn" onclick="buyWeapon()">0강 무기 구매 (<span id="buyPrice"></span>G)</button>
+      </div>
+
+      <details open style="margin-top:14px;">
+        <summary>판매</summary>
+        <div id="sellList" style="margin-top:8px;"></div>
+      </details>
+
+      <div class="log" id="shopLog"></div>
+    </div>
+
+    <!-- 창고 탭 (읽기 전용) -->
+    <div class="tabPanel" id="tab-stash">
+      <div class="panelTitle">창고 (보유 아이템 확인)</div>
+
+      <details open>
+        <summary>강화용 재료</summary>
+        <div id="enchantList"></div>
+      </details>
+
+      <details open>
+        <summary>판매용 재료</summary>
+        <div id="junkList"></div>
+      </details>
+
+      <details open>
+        <summary>보유 무기</summary>
+        <div id="stashList"></div>
+      </details>
+    </div>
+
+    <!-- 도감 탭 -->
+    <div class="tabPanel" id="tab-compendium">
+      <div class="panelTitle">도감</div>
+      <div id="compendiumProgress" style="font-size:12px; color:var(--sub); margin-bottom:12px;"></div>
+      <div id="compendiumGrid"></div>
+      <div id="compendiumCapstone" style="margin-top:12px; font-size:12px;"></div>
+    </div>
+
   </div>
-</section>
+</div>
 
-<hr>
-
-<!-- ─── Intro ─── -->
-<section id="intro">
-  <div class="container">
-    <div class="intro-wrap fade-in">
-      <div class="intro-left">
-        <div class="section-eyebrow">About Me</div>
-        <h2 class="intro-headline">게임을 만든 사람이<br>테스트합니다</h2>
-        <p class="intro-body">
-          게임콘텐츠 전공자로서 기획부터 개발, 출시까지 직접 경험했습니다.
-          만드는 사람의 시각으로 버그를 먼저 예측하고,
-          유저의 시각으로 품질을 철저히 검증합니다.<br><br>
-          스토브 인디 플랫폼에 게임을 정식 출시한 QA 경험을 보유하고 있으며,
-          완벽주의 성향과 끈기로 출시 품질을 끝까지 책임졌습니다.
-        </p>
-      </div>
-      <div class="intro-right">
-        <div class="intro-highlights">
-          <div class="ih">
-            <span class="ih-num">01</span>
-            <div>
-              <div class="ih-title">만드는 사람의 눈</div>
-              <div class="ih-desc">기획 의도를 직접 경험했기 때문에 의도와 다른 동작을 즉시 포착합니다</div>
-            </div>
-          </div>
-          <div class="ih">
-            <span class="ih-num">02</span>
-            <div>
-              <div class="ih-title">완벽주의적 꼼꼼함</div>
-              <div class="ih-desc">사소한 결함도 절대 놓치지 않는 성격이 QA 직무에 그대로 발휘됩니다</div>
-            </div>
-          </div>
-          <div class="ih">
-            <span class="ih-num">03</span>
-            <div>
-              <div class="ih-title">끝까지 해내는 끈기</div>
-              <div class="ih-desc">반복 테스트도 포기하지 않고, 품질이 확보될 때까지 검증을 이어갑니다</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- 던전 PIP 미니뷰 (제목 표시줄을 드래그해서 자유롭게 옮길 수 있다) -->
+<div id="pip">
+  <div class="pipHead" id="pipDragHandle">
+    <span>🖐 던전 (PIP)</span>
+    <button class="small secondary" onclick="setTab('dungeon')">전체보기</button>
   </div>
-</section>
+  <div class="pipStage" id="pipStageName"><span id="pipMonsterIcon"></span> <span id="pipStageText"></span></div>
+  <div id="pipHpText" style="font-size:11px; color:var(--sub); margin-bottom:4px;"></div>
+  <div id="pipHpBarOuter" style="background:#3a2c20; border-radius:6px; height:10px; width:100%; overflow:hidden; margin-bottom:6px;"><div id="pipHpBarInner" style="background:var(--hp); height:100%; width:100%;"></div></div>
+  <div id="pipTimeText" style="font-size:11px; color:var(--sub); margin-bottom:4px;"></div>
+  <div id="pipTimeBarOuter" style="background:#3a2c20; border-radius:6px; height:6px; width:100%; overflow:hidden; margin-bottom:10px;"><div id="pipTimeBarInner" style="background:var(--enchant); height:100%; width:0%;"></div></div>
 
-<hr>
-
-<!-- ─── Projects ─── -->
-<section id="projects">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">Projects</div>
-      <h2 class="section-title">QA 참여 프로젝트</h2>
-      <p class="section-sub">테스트 수행과 품질 검증에 직접 참여한 프로젝트들</p>
-    </div>
-    <div class="projects-list fade-in">
-
-      <!-- 스토브 인디 -->
-      <div class="project-card">
-        <div class="project-inner">
-          <div>
-            <div class="project-type">팀 프로젝트 · 게임 개발 · 2026년 6월 정식 출시</div>
-            <div class="project-title">스토브 인디 출시 게임</div>
-            <div class="project-desc">
-              유니티로 개발해 스토브 인디 플랫폼에 정식 출시한 인디 게임.
-              게임 기획 내용을 바탕으로 테스트 항목을 정리하고, 직접 플레이하며
-              버그와 오류를 발견·기록했습니다. 발견한 버그를 팀원에게 공유하고
-              수정 후 재검증하는 과정을 반복해 출시 품질을 확보했습니다.
-            </div>
-            <div class="project-meta">
-              <span class="meta-key">팀 구성</span>
-              <span class="meta-val">4인 팀 프로젝트</span>
-              <span class="meta-key">기여도</span>
-              <span class="meta-val">약 40% — QA · 기획 · 문서화 담당</span>
-              <span class="meta-key">포지션</span>
-              <span class="meta-val">QA · 게임 기획 · 문서화</span>
-            </div>
-            <div class="tag-stack">
-              <span class="tag-blue">버그 리포팅</span>
-              <span class="tag-blue">재현 검증</span>
-              <span class="tag-blue">반복 테스트</span>
-              <span class="tag">Unity</span>
-              <span class="tag">Git</span>
-              <span class="tag">Notion</span>
-            </div>
-          </div>
-          <div class="proj-right">
-            <a href="https://store.onstove.com/ko/games/104725" target="_blank" class="proj-btn">
-              스토브에서 보기 ↗
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- 보드게임 -->
-      <div class="project-card">
-        <div class="project-inner">
-          <div>
-            <div class="project-type">팀 프로젝트 · 게임 기획</div>
-            <div class="project-title">보드게임 제작</div>
-            <div class="project-desc">
-              팀원들과 함께 기획·제작한 보드게임.
-              게임 규칙에 논리적 허점이 없는지 반복적인 플레이테스트로 검증하고,
-              발견한 문제점을 팀에 공유해 규칙을 수정하는 과정을 반복했습니다.
-              피드백 수집 → 수정 → 재검증의 품질 개선 사이클을 처음으로 경험한 프로젝트입니다.
-            </div>
-            <div class="project-meta">
-              <span class="meta-key">팀 구성</span>
-              <span class="meta-val">4인 팀 프로젝트</span>
-              <span class="meta-key">기여도</span>
-              <span class="meta-val">약 35% — 기획 · 플레이테스트 · 밸런싱 담당</span>
-              <span class="meta-key">포지션</span>
-              <span class="meta-val">게임 기획 · 플레이테스트 · 품질 검증</span>
-            </div>
-            <div class="tag-stack">
-              <span class="tag-blue">플레이테스트</span>
-              <span class="tag-blue">규칙 검증</span>
-              <span class="tag-blue">밸런싱</span>
-              <span class="tag">게임 기획</span>
-              <span class="tag">팀 협업</span>
-            </div>
-          </div>
-          <div class="proj-right">
-            <span class="proj-btn" style="opacity:0.3; cursor:default; pointer-events:none;">팀 프로젝트</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
+  <div id="pipFailArea" style="display:none;">
+    <div style="font-size:12px; color:var(--destroy); margin-bottom:4px;">던전 실패...</div>
+    <select id="pipCheckpointSelect"></select>
+    <button onclick="startFromStage('pipCheckpointSelect')">이 스테이지부터 시작</button>
   </div>
-</section>
 
-<hr>
+  <details id="pipJumpArea" style="display:none; margin-bottom:8px;">
+    <summary style="font-size:11px;">스테이지 이동</summary>
+    <select id="pipJumpSelect" style="margin-top:6px;"></select>
+    <button onclick="jumpToStage('pipJumpSelect')">이동</button>
+  </details>
 
-<!-- ─── Strengths ─── -->
-<section id="strengths">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">Strengths</div>
-      <h2 class="section-title">QA 엔지니어로서의 강점</h2>
-      <p class="section-sub">타고난 성향이 QA 직무와 자연스럽게 맞닿아 있습니다</p>
-    </div>
-    <div class="strengths-grid fade-in">
-
-      <div class="strength-card">
-        <div class="strength-icon">🔍</div>
-        <div class="strength-title">놓치지 않는 꼼꼼함</div>
-        <div class="strength-desc">
-          완벽주의 성향으로 작은 오류나 예외 상황도 그냥 지나치지 않습니다.
-          주변에서 꼼꼼하다는 말을 일관되게 들어왔으며,
-          이 성격 덕분에 프로젝트의 품질을 끝까지 챙길 수 있었습니다.
-        </div>
-        <span class="strength-qa-tag">결함 발견 · 세밀한 품질 기준</span>
-      </div>
-
-      <div class="strength-card">
-        <div class="strength-icon">💪</div>
-        <div class="strength-title">흔들리지 않는 끈기</div>
-        <div class="strength-desc">
-          한 번 시작하면 누구보다 끝까지 완주하는 오기가 있습니다.
-          반복적인 테스트와 재검증처럼 인내를 요구하는 작업에서도
-          품질을 타협하지 않고 끝까지 수행합니다.
-        </div>
-        <span class="strength-qa-tag">반복 검증 · 재현 테스트</span>
-      </div>
-
-      <div class="strength-card">
-        <div class="strength-icon">🧩</div>
-        <div class="strength-title">게임을 아는 시각</div>
-        <div class="strength-desc">
-          게임콘텐츠 전공자이자 게임 플레이어로서 사용자 관점의 문제를
-          자연스럽게 포착합니다. 기획 의도와 실제 구현 사이의 괴리를
-          빠르게 알아채는 것이 강점입니다.
-        </div>
-        <span class="strength-qa-tag">사용자 관점 · 기획 이해</span>
-      </div>
-
-      <div class="strength-card">
-        <div class="strength-icon">🤝</div>
-        <div class="strength-title">명확한 소통과 협업</div>
-        <div class="strength-desc">
-          발견한 문제를 팀원에게 논리적으로 설명하고 설득하는 데 익숙합니다.
-          피드백을 그대로 받아들이기보다 더 나은 방향을 함께 찾으며
-          팀 전체의 결과물 품질을 높이는 방향으로 소통합니다.
-        </div>
-        <span class="strength-qa-tag">버그 공유 · 개발팀 소통</span>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<hr>
-
-<!-- ─── Skills ─── -->
-<section id="skills">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">Skills</div>
-      <h2 class="section-title">보유 기술</h2>
-      <p class="section-sub">QA 직무에 필요한 기술들을 갖추고 있습니다</p>
-    </div>
-    <div class="skills-grid fade-in" id="skills-grid">
-
-      <div class="skill-card">
-        <div class="skill-header">
-          <span class="skill-name">문서화 · PowerPoint</span>
-          <span class="skill-level level-high">자신 있음</span>
-        </div>
-        <div class="skill-bar"><div class="skill-fill fill-green" data-w="80"></div></div>
-        <div class="skill-tags">
-          <span class="tag">테스트 결과 정리</span><span class="tag">기획 문서</span><span class="tag">보고서 작성</span>
-        </div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-header">
-          <span class="skill-name">QA 기초 · SW 품질관리</span>
-          <span class="skill-level level-mid">경험 있음</span>
-        </div>
-        <div class="skill-bar"><div class="skill-fill fill-accent" data-w="45"></div></div>
-        <div class="skill-tags">
-          <span class="tag">버그 리포팅</span><span class="tag">재현 검증</span><span class="tag">반복 테스트</span>
-        </div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-header">
-          <span class="skill-name">협업 도구</span>
-          <span class="skill-level level-mid">경험 있음</span>
-        </div>
-        <div class="skill-bar"><div class="skill-fill fill-accent" data-w="50"></div></div>
-        <div class="skill-tags">
-          <span class="tag">Notion</span><span class="tag">Git (기초)</span><span class="tag">Figma (기초)</span>
-        </div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-header">
-          <span class="skill-name">AI 도구 활용</span>
-          <span class="skill-level level-mid">경험 있음</span>
-        </div>
-        <div class="skill-bar"><div class="skill-fill fill-accent" data-w="55"></div></div>
-        <div class="skill-tags">
-          <span class="tag">ChatGPT</span><span class="tag">Gemini</span><span class="tag">바이브 코딩</span>
-        </div>
-      </div>
-
-      <div class="skill-card">
-        <div class="skill-header">
-          <span class="skill-name">Unity · 게임 구조 이해</span>
-          <span class="skill-level level-learn">학습 중</span>
-        </div>
-        <div class="skill-bar"><div class="skill-fill fill-accent" data-w="25"></div></div>
-        <div class="skill-tags">
-          <span class="tag">C# 기초</span><span class="tag">게임 메커니즘 이해</span>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<hr>
-
-<!-- ─── Experience ─── -->
-<section id="experience">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">Experience &amp; Education</div>
-      <h2 class="section-title">경력 · 학력</h2>
-    </div>
-    <div class="timeline fade-in">
-
-      <div class="tl-item">
-        <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
-        <div class="tl-body">
-          <div class="tl-period">2022 — 현재</div>
-          <div class="tl-role">게임콘텐츠 전공 재학</div>
-          <div class="tl-org">유한대학교</div>
-          <div class="tl-desc">
-            Unity, SW 품질관리, 게임 기획 등 게임 개발 전반을 학습.
-            SW 품질관리 과목을 통해 소프트웨어 테스트의 기초 이론을 익혔으며,
-            팀 프로젝트에서 QA 역할을 직접 수행하며 실전 경험을 쌓고 있습니다.
-          </div>
-          <div class="tl-tags">
-            <span class="tag">SW 품질관리</span><span class="tag">Unity</span><span class="tag">게임 기획</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="tl-item">
-        <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
-        <div class="tl-body">
-          <div class="tl-period">2026년 6월 출시</div>
-          <div class="tl-role">QA 참여 · 게임 기획</div>
-          <div class="tl-org">인디 게임 팀 (4인)</div>
-          <div class="tl-desc">
-            4인 팀에서 QA를 담당해 인디 게임을 정식 출시.
-            직접 플레이하며 버그를 발견·기록하고, 수정 후 재검증을 반복해
-            출시 가능한 품질 수준을 확보했습니다.
-          </div>
-          <div class="tl-tags">
-            <span class="tag">버그 리포팅</span><span class="tag">재현 검증</span><span class="tag">반복 테스트</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="tl-item">
-        <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
-        <div class="tl-body">
-          <div class="tl-period">2021년 10월 · 1개월</div>
-          <div class="tl-role">현장 실습생</div>
-          <div class="tl-org">킨코스 코리아 (Kinko's Korea)</div>
-          <div class="tl-desc">
-            고등학교 재학 중 현장 실습을 통해 첫 실무 환경을 경험.
-            낯선 환경에 빠르게 적응하며 적극적으로 임하는 태도를 키웠습니다.
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<hr>
-
-<!-- ─── About ─── -->
-<section id="about">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">About</div>
-      <h2 class="section-title">소개</h2>
-    </div>
-    <div class="about-grid fade-in">
-      <div class="about-text">
-        <p>
-          유한대학교 게임콘텐츠 전공 재학 중인 게임 QA 엔지니어입니다.
-          스토브 인디 출시 게임의 QA를 직접 경험하며 품질 검증의 중요성을
-          확실히 체감했고, QA가 제 적성과 강점에 가장 잘 맞는 직무임을 확신합니다.
-        </p>
-        <p>
-          꼼꼼한 성격과 완벽주의 성향은 QA 직무에서 가장 빛을 발합니다.
-          한번 시작하면 누구보다 끝까지 완주하는 끈기로,
-          품질이 확보될 때까지 절대 타협하지 않습니다.
-        </p>
-        <p>
-          게임을 직접 만든 경험 덕분에 개발 과정 전반을 이해하며,
-          플레이어의 눈으로 문제를 먼저 포착하는 것이 남다른 강점입니다.
-        </p>
-        <div class="info-list">
-          <div class="info-row"><span class="info-k">전공</span><span class="info-v">유한대학교 게임콘텐츠 전공</span></div>
-          <div class="info-row"><span class="info-k">거주지</span><span class="info-v">서울특별시 영등포구</span></div>
-          <div class="info-row"><span class="info-k">강점</span><span class="info-v">꼼꼼함 · 끈기 · 완벽주의</span></div>
-          <div class="info-row"><span class="info-k">관심사</span><span class="info-v">게임, 바이브 코딩, 음악, 자전거</span></div>
-          <div class="info-row"><span class="info-k">이메일</span><span class="info-v">rlatkdgjs0304@naver.com</span></div>
-        </div>
-      </div>
-      <div class="trait-list">
-        <div class="trait-item">
-          <div class="trait-k">업무 스타일</div>
-          <div class="trait-v">꼼꼼하게, 끝까지</div>
-          <div class="trait-sub">완성도를 타협하지 않고 마감 기한을 반드시 지킵니다</div>
-        </div>
-        <div class="trait-item">
-          <div class="trait-k">협업 방식</div>
-          <div class="trait-v">논리적 소통, 팀 중심</div>
-          <div class="trait-sub">발견한 문제를 명확히 공유하고 해결 방향을 함께 찾습니다</div>
-        </div>
-        <div class="trait-item">
-          <div class="trait-k">QA 관점</div>
-          <div class="trait-v">플레이어 + 검증자 시각</div>
-          <div class="trait-sub">게임을 즐기는 유저의 눈으로 품질 문제를 먼저 포착합니다</div>
-        </div>
-        <div class="trait-item">
-          <div class="trait-k">커리어 목표</div>
-          <div class="trait-v">게임 QA 전문가로 성장</div>
-          <div class="trait-sub">경험을 쌓아 중견 게임사의 QA 담당자가 되는 것이 목표입니다</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr>
-
-<!-- ─── Contact ─── -->
-<section id="contact">
-  <div class="container">
-    <div class="fade-in">
-      <div class="section-eyebrow">Contact</div>
-      <h2 class="section-title">연락하기</h2>
-    </div>
-    <div class="contact-inner fade-in">
-      <p>채용 문의 및 협업 제안 언제든지 환영합니다</p>
-      <div class="contact-email">rlatkdgjs0304@naver.com</div>
-      <a href="mailto:rlatkdgjs0304@naver.com" class="btn btn-accent">이메일 보내기</a>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <p>© 2026 김상헌 · 게임 QA 엔지니어</p>
-</footer>
+  <button id="pipToggleBtn" onclick="toggleBattle()">전투 시작</button>
+</div>
 
 <script>
-  // Fade-in
-  const fadeObs = new IntersectionObserver(
-    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-    { threshold: 0.06 }
-  );
-  document.querySelectorAll('.fade-in').forEach(el => fadeObs.observe(el));
+// ===== 조절값 (여기서만 수정) =====
+const MAX_LEVEL = 26;
+const DESTROY_START_LEVEL = 12;
+const BASE_SUCCESS = 100;
+const SUCCESS_DROP_PER_LEVEL = 10;
+const MIN_SUCCESS = 15;
+const DESTROY_RATE_PER_LEVEL = 6;
+const MAX_DESTROY = 35;
+const ATK_BASE = 10;
+const ATK_PER_LEVEL = 8;
+const ENHANCE_GOLD_COST = 20;
 
-  // Skill bars
-  const barObs = new IntersectionObserver(
-    entries => entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      e.target.querySelectorAll('.skill-fill[data-w]').forEach(bar => {
-        setTimeout(() => { bar.style.width = bar.dataset.w + '%'; }, 100);
-      });
-    }),
-    { threshold: 0.2 }
-  );
-  const sg = document.getElementById('skills-grid');
-  if (sg) barObs.observe(sg);
+const CRAFT_MATERIAL_COST = 5;
+const SHOP_WEAPON_PRICE = 50;
+const SELL_ENCHANT_PRICE = 1;
+const SELL_WEAPON_BASE = 15;
+const SELL_WEAPON_PER_LEVEL = 10;
 
-  // Nav active
-  const secs = document.querySelectorAll('section[id]');
-  const links = document.querySelectorAll('.nav-links a');
-  window.addEventListener('scroll', () => {
-    let cur = '';
-    secs.forEach(s => { if (window.scrollY >= s.offsetTop - 90) cur = s.id; });
-    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + cur));
-  }, { passive: true });
+const ATTACK_INTERVAL_MS = 500;
+const STAGE_TIME_LIMIT_SEC = 5;
+const STAGE_HP_BASE = 90;   // +0강(공격력10) 기준 5초 안에 9번 때려야 겨우 클리어 — 의도적으로 매우 빡빡함
+const STAGE_HP_GROWTH = 1.08;
+const BOSS_STAGE_INTERVAL = 10;
+const AUTO_ENTER_UNLOCK_STAGE = 10; // 이 스테이지를 최초로 클리어하면 던전 자동 입장 기능이 해금된다.
+const BOSS_HP_MULTIPLIER = 5;
+const BOSS_GOLD_PER_HIT = 3;
+const GOLD_PER_KILL = 5;
+const BOSS_CLEAR_GOLD_MULTIPLIER = 5;
+
+const ENCHANT_DROP_CHANCE = 70;  // 철 파편(강화용) 드롭 확률 - 클리어시, 높게
+const JUNK_DROP_CHANCE = 70;     // 판매용 재료 드롭 확률 - 클리어시, 높게 (5종 중 1개 랜덤 드롭)
+const MATERIAL_BASE = 1;
+const MATERIAL_PER_STAGE = 0.2;
+
+const WEAPON_NAMES = [
+  "녹슨 검", "무딘 검", "쇠검", "강철검", "예리한 검",
+  "벼려진 검", "정련된 검", "불꽃의 검", "작열검", "용암검",
+  "흑염검", "마검", "파멸의 검", "심연검", "저주받은 검",
+  "광휘검", "성스러운 검", "천상검", "용살검", "신화검",
+  "태초의 검", "창세검", "종말검", "초월검", "절대검",
+  "신의 검", "전설의 대장장이검"
+];
+// 무기 등급 구간별 아이콘 색상 (강화 단계가 오를수록 색이 바뀐다).
+const WEAPON_TIER_COLORS = [
+  { max: 4, color: "#b0a89c" },
+  { max: 9, color: "#ff8a4a" },
+  { max: 14, color: "#a64ac9" },
+  { max: 19, color: "#e0b84a" },
+  { max: 25, color: "#7cc4e8" },
+  { max: 26, color: "#ffffff" }
+];
+function getWeaponColor(lv) {
+  return WEAPON_TIER_COLORS.find(t => lv <= t.max).color;
+}
+
+// 판매용 재료(잡템) 5종. 강화에는 안 쓰이고 판매 전용.
+const JUNK_ITEMS = [
+  { name: "몬스터 발톱", price: 2 },
+  { name: "몬스터 가죽", price: 3 },
+  { name: "몬스터 이빨", price: 2 },
+  { name: "몬스터 뿔", price: 4 },
+  { name: "몬스터 뼛조각", price: 1 },
+];
+
+// 지형 목록. 10스테이지(1묶음)마다 하나씩 순서대로 쓰고, 목록을 다 쓰면 마지막 지형을 계속 재사용한다.
+// 이름/몬스터/도감 효과는 전부 예시이며, 나중에 지형을 더 추가하면 자동으로 이어진다.
+// 카드 효과 type 종류: enhanceSuccess(강화 성공%p), destroyReduce(파괴 확률 감소%p),
+//                     atk(공격력 고정치), goldPct(골드 획득량 %), junkDrop(판매 재료 드롭률%p), enchantFlat(철 파편 드롭량 고정치)
+const ZONES = [
+  { name: "초원",
+    monster: { icon: "rabbit", color: "#d9a066", cardName: "들토끼", effects: [{ type: "junkDrop", value: 3, desc: "판매 재료 드롭률 +3%p" }] },
+    boss:    { icon: "bear", color: "#8b5a2b", cardName: "초원 불곰", effects: [{ type: "junkDrop", value: 5, desc: "판매 재료 드롭률 +5%p" }] } },
+  { name: "초원",
+    monster: { icon: "wolf", color: "#8a8a8a", cardName: "늑대", effects: [{ type: "atk", value: 2, desc: "공격력 +2" }] },
+    boss:    { icon: "wolfboss", color: "#4a4a4a", cardName: "늑대 두목", effects: [{ type: "atk", value: 5, desc: "공격력 +5" }] } },
+  { name: "초원",
+    monster: { icon: "boar", color: "#6b4226", cardName: "멧돼지", effects: [{ type: "goldPct", value: 5, desc: "골드 획득량 +5%" }] },
+    boss:    { icon: "boarboss", color: "#4a2f1a", cardName: "거대 멧돼지", effects: [{ type: "goldPct", value: 10, desc: "골드 획득량 +10%" }] } },
+  { name: "동굴",
+    monster: { icon: "bat", color: "#6b5b95", cardName: "박쥐", effects: [{ type: "enhanceSuccess", value: 1, desc: "강화 성공 확률 +1%p" }] },
+    boss:    { icon: "spider", color: "#3a2a4a", cardName: "거대 거미", effects: [{ type: "enhanceSuccess", value: 2, desc: "강화 성공 확률 +2%p" }] } },
+  { name: "동굴",
+    monster: { icon: "rat", color: "#9c8a6b", cardName: "쥐", effects: [{ type: "enchantFlat", value: 1, desc: "철 파편 드롭량 +1" }] },
+    boss:    { icon: "snakequeen", color: "#4f8a4f", cardName: "독사여왕", effects: [{ type: "destroyReduce", value: 2, desc: "파괴 확률 -2%p" }] } },
+  { name: "화산",
+    monster: { icon: "salamander", color: "#c9622b", cardName: "살라만더", effects: [{ type: "atk", value: 3, desc: "공격력 +3" }] },
+    boss:    { icon: "dragon", color: "#c94f4f", cardName: "화룡", effects: [
+      { type: "enhanceSuccess", value: 3, desc: "강화 성공 확률 +3%p" },
+      { type: "destroyReduce", value: 3, desc: "파괴 확률 -3%p" } ] } },
+];
+
+const CARD_DROP_CHANCE_NORMAL = 5;   // 일반 몬스터 도감 카드 획득 확률(%)
+const CARD_DROP_CHANCE_BOSS = 25;    // 보스 도감 카드 획득 확률(%)
+
+// 도감을 전부 채우면(모든 카드 수집) 추가로 붙는 마무리 보너스.
+const CAPSTONE_EFFECTS = [
+  { type: "destroyReduce", value: 5, desc: "파괴 확률 -5%p" },
+  { type: "goldPct", value: 20, desc: "골드 획득량 +20%" },
+];
+// ===================================
+
+// 도감 카드 목록을 지형 데이터에서 자동으로 뽑아낸다.
+const ALL_CARDS = [];
+ZONES.forEach((z, i) => {
+  ALL_CARDS.push({ key: i + "-monster", zoneName: z.name, major: i + 1, kind: "monster", ...z.monster });
+  ALL_CARDS.push({ key: i + "-boss", zoneName: z.name, major: i + 1, kind: "boss", ...z.boss });
+});
+
+let collectedCards = new Set(); // 수집한 도감 카드 key 모음
+
+function getCardBonus(type) {
+  let total = 0;
+  ALL_CARDS.forEach(c => {
+    if (collectedCards.has(c.key)) {
+      c.effects.forEach(e => { if (e.type === type) total += e.value; });
+    }
+  });
+  if (collectedCards.size >= ALL_CARDS.length) {
+    CAPSTONE_EFFECTS.forEach(e => { if (e.type === type) total += e.value; });
+  }
+  return total;
+}
+
+function getMajor(stageIndex) { return Math.ceil(stageIndex / BOSS_STAGE_INTERVAL); }
+function getMinor(stageIndex) { return ((stageIndex - 1) % BOSS_STAGE_INTERVAL) + 1; }
+function getZone(stageIndex) {
+  const major = getMajor(stageIndex);
+  const idx = Math.min(major - 1, ZONES.length - 1);
+  return ZONES[idx];
+}
+function getStageLabel(stageIndex) {
+  return `${getZone(stageIndex).name} ${getMajor(stageIndex)}-${getMinor(stageIndex)}`;
+}
+function getStageCard(stageIndex) {
+  const zone = getZone(stageIndex);
+  return isBossStage(stageIndex) ? zone.boss : zone.monster;
+}
+function getStageIconHtml(stageIndex, sizeClass) {
+  const c = getStageCard(stageIndex);
+  return `<svg class="${sizeClass}" style="color:${c.color}"><use href="#icon-${c.icon}"/></svg>`;
+}
+function getCardIconHtml(card, sizeClass, locked) {
+  return `<svg class="${sizeClass}${locked ? " iconLocked" : ""}" style="color:${card.color}"><use href="#icon-${card.icon}"/></svg>`;
+}
+function getStageMonsterName(stageIndex) { return getStageCard(stageIndex).cardName; }
+function getStageCardKey(stageIndex) {
+  return (getMajor(stageIndex) - 1) + (isBossStage(stageIndex) ? "-boss" : "-monster");
+}
+
+let weaponLevel = 0;
+let hasWeapon = true;
+let gold = 0;
+let enchantMaterial = 0;      // 철 파편 (강화용)
+let junkMaterials = {};       // { 아이템명: 개수 } (판매용)
+JUNK_ITEMS.forEach(j => junkMaterials[j.name] = 0);
+let weaponStash = {};         // 레벨별 무기 개수
+
+let currentStage = 1;
+let maxClearedStage = 0;
+let monsterMaxHp = computeMonsterHp(1);
+let monsterHp = monsterMaxHp;
+let battling = false;
+let battleTimer = null;
+let runFailed = false;
+let autoEnterUnlocked = false; // 스테이지 10 최초 클리어 보상: 클리어한 스테이지로 자동 입장 가능
+
+// 타이머는 500ms 틱이 아니라 실제 경과 시간(ms)으로 계산해서 부드럽게 줄어들게 한다.
+let stageElapsedBeforePause = 0; // 이전에 일시정지된 시점까지 쌓인 경과 시간(초)
+let stageResumeTime = null;      // 현재 구간이 재개된 시각(전투 중이 아니면 null)
+let rafId = null;
+
+function getElapsedSec() {
+  if (stageResumeTime === null) return stageElapsedBeforePause;
+  return stageElapsedBeforePause + (Date.now() - stageResumeTime) / 1000;
+}
+
+function resetStageTimer() {
+  stageElapsedBeforePause = 0;
+  stageResumeTime = battling ? Date.now() : null;
+}
+
+// ===== 탭 전환 =====
+
+function setTab(name) {
+  document.querySelectorAll(".tabPanel").forEach(el => el.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  document.querySelectorAll(".tabBtn").forEach(btn => btn.classList.remove("active"));
+  const idx = ["enhance", "dungeon", "shop", "stash", "compendium"].indexOf(name);
+  document.querySelectorAll(".tabBtn")[idx].classList.add("active");
+
+  // 던전 탭을 보고 있을 때는 PIP를 숨기고, 다른 탭에서는 PIP로 계속 보여준다.
+  document.getElementById("pip").style.display = name === "dungeon" ? "none" : "block";
+
+  renderAll();
+}
+
+// ===== 공용 계산 =====
+
+function isBossStage(s) { return s % BOSS_STAGE_INTERVAL === 0; }
+
+function computeMonsterHp(s) {
+  let hp = STAGE_HP_BASE * Math.pow(STAGE_HP_GROWTH, s - 1);
+  if (isBossStage(s)) hp *= BOSS_HP_MULTIPLIER;
+  return Math.round(hp);
+}
+
+function getRates(lv) {
+  let success = Math.max(MIN_SUCCESS, BASE_SUCCESS - lv * SUCCESS_DROP_PER_LEVEL) + getCardBonus("enhanceSuccess");
+  let destroy = 0;
+  if (lv >= DESTROY_START_LEVEL) {
+    destroy = Math.min(MAX_DESTROY, (lv - DESTROY_START_LEVEL + 1) * DESTROY_RATE_PER_LEVEL);
+  }
+  destroy = Math.max(0, destroy - getCardBonus("destroyReduce"));
+  success = Math.min(100 - destroy, success); // 도감 보너스가 100%를 넘지 않도록 보정
+  const fail = Math.max(0, 100 - success - destroy);
+  return { success, fail, destroy };
+}
+
+function getAtk() { return hasWeapon ? ATK_BASE + weaponLevel * ATK_PER_LEVEL + getCardBonus("atk") : 0; }
+function getStashCount(lv) { return weaponStash[lv] || 0; }
+
+// ===== 렌더링 =====
+
+function renderAll() {
+  document.getElementById("goldCount").textContent = gold;
+  renderEnhanceTab();
+  renderShopTab();
+  renderStashTab();
+  renderDungeon();
+  renderCompendium();
+}
+
+function renderCompendium() {
+  document.getElementById("compendiumProgress").textContent =
+    `${collectedCards.size} / ${ALL_CARDS.length} 종 수집`;
+
+  document.getElementById("compendiumGrid").innerHTML = ALL_CARDS.map(c => {
+    const got = collectedCards.has(c.key);
+    const effectText = c.effects.map(e => e.desc).join(", ");
+    return `
+      <div class="itemRow" style="opacity:${got ? 1 : 0.45};">
+        <span>${getCardIconHtml(c, "iconCard", !got)} ${c.cardName} <span style="color:var(--sub); font-size:11px;">(${c.zoneName} ${c.major}${c.kind === "boss" ? "강 보스" : "강"})</span></span>
+        <span style="color:${got ? "var(--success)" : "var(--sub)"};">${got ? effectText : "미수집"}</span>
+      </div>`;
+  }).join("");
+
+  const complete = collectedCards.size >= ALL_CARDS.length;
+  const capstoneText = CAPSTONE_EFFECTS.map(e => e.desc).join(", ");
+  document.getElementById("compendiumCapstone").innerHTML =
+    `<b style="color:${complete ? "var(--success)" : "var(--sub)"};">도감 완성 보너스</b>: ${capstoneText} ${complete ? "(적용 중)" : "(전부 모으면 적용)"}`;
+}
+
+function renderEnhanceTab() {
+  const nameEl = document.getElementById("weaponName");
+  const statsEl = document.getElementById("stats");
+  const ratesEl = document.getElementById("rates");
+  const costEl = document.getElementById("enhanceCost");
+  const enhanceArea = document.getElementById("enhanceArea");
+  const noWeaponArea = document.getElementById("noWeaponArea");
+  const enhanceBtn = document.getElementById("enhanceBtn");
+
+  document.getElementById("enchantCountA").textContent = enchantMaterial;
+  document.getElementById("craftCostText").textContent = CRAFT_MATERIAL_COST;
+  document.getElementById("craftBtn").disabled = enchantMaterial < CRAFT_MATERIAL_COST;
+
+  if (!hasWeapon) {
+    nameEl.innerHTML = `<svg class="iconWeapon" style="color:#665c4e"><use href="#icon-sword"/></svg>무기 없음`;
+    nameEl.className = "";
+    statsEl.textContent = "";
+    enhanceArea.style.display = "none";
+    noWeaponArea.style.display = "block";
+  } else {
+    noWeaponArea.style.display = "none";
+    enhanceArea.style.display = "block";
+
+    nameEl.innerHTML = `<svg class="iconWeapon" style="color:${getWeaponColor(weaponLevel)}"><use href="#icon-sword"/></svg>+${weaponLevel} ${WEAPON_NAMES[weaponLevel]}`;
+    nameEl.className = weaponLevel > 0 ? "plus" : "";
+    statsEl.textContent = `공격력 ${getAtk()}`;
+
+    if (weaponLevel >= MAX_LEVEL) {
+      ratesEl.textContent = "최고 강화 달성.";
+      costEl.textContent = "";
+      enhanceBtn.disabled = true;
+      enhanceBtn.textContent = "강화 완료";
+    } else {
+      const r = getRates(weaponLevel);
+      ratesEl.textContent = `성공 ${r.success}% / 실패 ${r.fail}% / 파괴 ${r.destroy}%`;
+      const matCount = getStashCount(weaponLevel);
+      costEl.textContent = `필요 재료: +${weaponLevel}강 무기 1개 (보유 ${matCount}개) / 비용: 골드 ${ENHANCE_GOLD_COST}`;
+      enhanceBtn.disabled = matCount < 1 || gold < ENHANCE_GOLD_COST;
+      enhanceBtn.textContent = "합성 강화";
+    }
+  }
+
+  // 창고 재료끼리 합성용 드롭다운 (2개 이상 있는 레벨만)
+  const mergeSelect = document.getElementById("mergeSelect");
+  const mergeLevels = Object.keys(weaponStash).map(Number).filter(lv => weaponStash[lv] >= 2 && lv < MAX_LEVEL).sort((a, b) => a - b);
+  if (mergeLevels.length === 0) {
+    mergeSelect.innerHTML = `<option value="">합성 가능한 무기 없음 (2개 이상 필요)</option>`;
+    document.getElementById("mergeBtn").disabled = true;
+  } else {
+    mergeSelect.innerHTML = mergeLevels.map(lv => {
+      const r = getRates(lv);
+      return `<option value="${lv}">+${lv} ${WEAPON_NAMES[lv]} x${weaponStash[lv]} (성공 ${r.success}%)</option>`;
+    }).join("");
+    document.getElementById("mergeBtn").disabled = false;
+  }
+}
+
+function renderShopTab() {
+  document.getElementById("buyPrice").textContent = SHOP_WEAPON_PRICE;
+  document.getElementById("buyBtn").disabled = gold < SHOP_WEAPON_PRICE;
+
+  const rows = [];
+
+  if (enchantMaterial > 0) {
+    rows.push({ value: "enchant", label: `철 파편 x${enchantMaterial} (개당 ${SELL_ENCHANT_PRICE}G)` });
+  }
+  JUNK_ITEMS.forEach(j => {
+    const count = junkMaterials[j.name] || 0;
+    if (count > 0) rows.push({ value: "junk:" + j.name, label: `${j.name} x${count} (개당 ${j.price}G)` });
+  });
+  Object.keys(weaponStash).map(Number).sort((a, b) => a - b).forEach(lv => {
+    if (weaponStash[lv] > 0) {
+      const price = SELL_WEAPON_BASE + lv * SELL_WEAPON_PER_LEVEL;
+      rows.push({ value: "weapon:" + lv, label: `+${lv} ${WEAPON_NAMES[lv]} x${weaponStash[lv]} (개당 ${price}G)` });
+    }
+  });
+
+  const sellList = document.getElementById("sellList");
+  if (rows.length === 0) {
+    sellList.innerHTML = `<div style="color:var(--sub); font-size:12px;">팔 물건이 없다.</div>`;
+  } else {
+    sellList.innerHTML = rows.map(r => `
+      <div class="itemRow">
+        <span>${r.label}</span>
+        <button class="small" onclick="sellItem('${r.value}')">판매</button>
+      </div>`).join("");
+  }
+}
+
+function renderStashTab() {
+  document.getElementById("enchantList").innerHTML =
+    `<div class="itemRow"><span>철 파편</span><span>${enchantMaterial}개</span></div>`;
+
+  const junkRows = JUNK_ITEMS.map(j => {
+    const count = junkMaterials[j.name] || 0;
+    return `<div class="itemRow"><span>${j.name}</span><span>${count}개</span></div>`;
+  }).join("");
+  document.getElementById("junkList").innerHTML = junkRows;
+
+  const levels = Object.keys(weaponStash).map(Number).filter(lv => weaponStash[lv] > 0).sort((a, b) => a - b);
+  const stashListEl = document.getElementById("stashList");
+  if (levels.length === 0) {
+    stashListEl.innerHTML = `<div style="color:var(--sub); font-size:12px;">보유한 무기가 없다.</div>`;
+  } else {
+    stashListEl.innerHTML = levels.map(lv =>
+      `<div class="stashRow"><span>+${lv} ${WEAPON_NAMES[lv]}</span><span>${weaponStash[lv]}개</span></div>`
+    ).join("");
+  }
+}
+
+function renderDungeon() {
+  document.getElementById("maxClearedText").textContent =
+    maxClearedStage > 0 ? `최고 클리어: ${getStageLabel(maxClearedStage)}` : "아직 클리어한 스테이지가 없다.";
+
+  const failArea = document.getElementById("failArea");
+  const battleArea = document.getElementById("battleArea");
+  const pipFailArea = document.getElementById("pipFailArea");
+  const jumpArea = document.getElementById("jumpArea");
+  const pipJumpArea = document.getElementById("pipJumpArea");
+  renderStageSelects();
+
+  if (runFailed) {
+    failArea.style.display = "block";
+    battleArea.style.display = "none";
+    pipFailArea.style.display = "block";
+    jumpArea.style.display = "none";
+    pipJumpArea.style.display = "none";
+    document.getElementById("pipToggleBtn").style.display = "none";
+    return;
+  }
+
+  failArea.style.display = "none";
+  battleArea.style.display = "block";
+  pipFailArea.style.display = "none";
+  jumpArea.style.display = autoEnterUnlocked ? "block" : "none";
+  pipJumpArea.style.display = autoEnterUnlocked ? "block" : "none";
+  document.getElementById("pipToggleBtn").style.display = "inline-block";
+
+  const boss = isBossStage(currentStage);
+  const label = getStageLabel(currentStage) + (boss ? " (보스)" : "");
+  const monsterName = getStageMonsterName(currentStage);
+
+  const stageNameEl = document.getElementById("stageName");
+  stageNameEl.textContent = label;
+  stageNameEl.className = boss ? "boss" : "";
+  document.getElementById("bossNote").textContent = boss ? "보스는 적중할 때마다 골드를 준다." : "";
+  document.getElementById("monsterIconWrap").innerHTML = getStageIconHtml(currentStage, "iconMonster");
+  document.getElementById("monsterNameLabel").textContent = monsterName;
+
+  document.getElementById("pipMonsterIcon").innerHTML = getStageIconHtml(currentStage, "iconMonsterSmall");
+  document.getElementById("pipStageText").textContent = `${label} · ${monsterName}`;
+  document.getElementById("pipStageName").className = "pipStage" + (boss ? " boss" : "");
+
+  const hpLabel = `${Math.max(0, Math.ceil(monsterHp))} / ${monsterMaxHp}`;
+  document.getElementById("hpText").textContent = hpLabel;
+  document.getElementById("pipHpText").textContent = hpLabel;
+  const hpPct = `${Math.max(0, monsterHp / monsterMaxHp * 100)}%`;
+  document.getElementById("hpBarInner").style.width = hpPct;
+  document.getElementById("pipHpBarInner").style.width = hpPct;
+
+  updateTimeDisplay();
+
+  const btnLabel = battling ? "전투 정지" : "전투 시작";
+  const toggleBtn = document.getElementById("toggleBtn");
+  toggleBtn.disabled = !hasWeapon;
+  toggleBtn.textContent = btnLabel;
+  toggleBtn.classList.toggle("stop", battling);
+
+  const pipToggleBtn = document.getElementById("pipToggleBtn");
+  pipToggleBtn.disabled = !hasWeapon;
+  pipToggleBtn.textContent = btnLabel;
+}
+
+// 타이머 바만 가볍게 갱신 (rAF로 매 프레임 불러서 부드럽게 줄어들도록 함).
+function updateTimeDisplay() {
+  if (runFailed) return;
+  const timeLeft = Math.max(0, STAGE_TIME_LIMIT_SEC - getElapsedSec());
+  const label = `제한시간 ${timeLeft.toFixed(1)} / ${STAGE_TIME_LIMIT_SEC}초`;
+  document.getElementById("timeText").textContent = label;
+  document.getElementById("pipTimeText").textContent = label;
+  const timePct = `${Math.max(0, timeLeft / STAGE_TIME_LIMIT_SEC * 100)}%`;
+  const timeBar = document.getElementById("timeBarInner");
+  const pipTimeBar = document.getElementById("pipTimeBarInner");
+  timeBar.style.width = timePct;
+  pipTimeBar.style.width = timePct;
+  const warn = timeLeft < STAGE_TIME_LIMIT_SEC * 0.4;
+  timeBar.classList.toggle("warn", warn);
+  pipTimeBar.style.background = warn ? "var(--destroy)" : "var(--enchant)";
+}
+
+// 클리어한 스테이지 목록을 던전 실패 화면의 체크포인트 선택, 자동 입장 스테이지 선택에 공통으로 채운다.
+function renderStageSelects() {
+  const options = [1];
+  for (let s = 2; s <= Math.max(1, maxClearedStage); s++) options.push(s);
+  const html = options.map(s => `<option value="${s}">${getStageLabel(s)}부터</option>`).join("");
+  const value = String(Math.max(1, maxClearedStage) || 1);
+
+  ["checkpointSelect", "pipCheckpointSelect", "jumpSelect", "pipJumpSelect"].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = html;
+    select.value = value;
+  });
+}
+
+// ===== 강화 탭 동작 =====
+
+function craftWeapon() {
+  if (enchantMaterial < CRAFT_MATERIAL_COST) return;
+  enchantMaterial -= CRAFT_MATERIAL_COST;
+  weaponStash[0] = getStashCount(0) + 1;
+  logTo("enhanceLog", "철 파편으로 0강 무기를 제작했다.", "");
+}
+
+function mergeSelectedStash() {
+  const lv = Number(document.getElementById("mergeSelect").value);
+  if (isNaN(lv) || getStashCount(lv) < 2) return;
+  const r = getRates(lv);
+  const roll = Math.random() * 100;
+
+  if (roll < r.success) {
+    weaponStash[lv] -= 2;
+    weaponStash[lv + 1] = getStashCount(lv + 1) + 1;
+    logTo("enhanceLog", `창고 합성 성공! +${lv + 1}강 무기 획득.`, "success");
+    playEnhanceFx("success");
+  } else if (roll < r.success + r.fail) {
+    weaponStash[lv] -= 1;
+    logTo("enhanceLog", "창고 합성 실패... 무기 1개 소실.", "fail");
+    playEnhanceFx("fail");
+  } else {
+    weaponStash[lv] -= 2;
+    logTo("enhanceLog", "창고 합성 실패로 무기 2개 모두 파괴...", "destroy");
+    playEnhanceFx("destroy");
+  }
+}
+
+function tryEnhanceEquip() {
+  if (!hasWeapon || weaponLevel >= MAX_LEVEL) return;
+  if (getStashCount(weaponLevel) < 1 || gold < ENHANCE_GOLD_COST) return;
+
+  weaponStash[weaponLevel] -= 1;
+  gold -= ENHANCE_GOLD_COST;
+
+  const r = getRates(weaponLevel);
+  const roll = Math.random() * 100;
+
+  if (roll < r.success) {
+    weaponLevel += 1;
+    logTo("enhanceLog", "합성 성공!", "success");
+    playEnhanceFx("success");
+  } else if (roll < r.success + r.fail) {
+    logTo("enhanceLog", "합성 실패... 재료 소실.", "fail");
+    playEnhanceFx("fail");
+  } else {
+    hasWeapon = false;
+    logTo("enhanceLog", "합성 실패로 무기 파괴...", "destroy");
+    failRun();
+    playEnhanceFx("destroy");
+  }
+}
+
+function issueNewWeapon() {
+  weaponLevel = 0;
+  hasWeapon = true;
+  // 골드, 재료, 창고는 그대로 유지된다. 던전 스테이지 진행은 던전 탭의 "던전 실패" 화면에서 따로 고른다.
+  logTo("enhanceLog", "새 무기를 받았다.", "");
+}
+
+// ===== 상점 탭 동작 =====
+
+function buyWeapon() {
+  if (gold < SHOP_WEAPON_PRICE) return;
+  gold -= SHOP_WEAPON_PRICE;
+  weaponStash[0] = getStashCount(0) + 1;
+  logTo("shopLog", "상점에서 0강 무기를 구매했다.", "success");
+}
+
+function sellItem(value) {
+  if (!value) return;
+
+  if (value === "enchant") {
+    const gain = enchantMaterial * SELL_ENCHANT_PRICE;
+    gold += gain;
+    enchantMaterial = 0;
+    popGold(`+${gain}`);
+    logTo("shopLog", `철 파편을 팔아 골드 +${gain}.`, "success");
+  } else if (value.startsWith("junk:")) {
+    const name = value.slice(5);
+    const item = JUNK_ITEMS.find(j => j.name === name);
+    const count = junkMaterials[name] || 0;
+    const gain = count * item.price;
+    gold += gain;
+    junkMaterials[name] = 0;
+    popGold(`+${gain}`);
+    logTo("shopLog", `${name}을(를) 팔아 골드 +${gain}.`, "success");
+  } else if (value.startsWith("weapon:")) {
+    const lv = Number(value.slice(7));
+    const count = getStashCount(lv);
+    const gain = count * (SELL_WEAPON_BASE + lv * SELL_WEAPON_PER_LEVEL);
+    gold += gain;
+    weaponStash[lv] = 0;
+    popGold(`+${gain}`);
+    logTo("shopLog", `+${lv}강 무기를 팔아 골드 +${gain}.`, "success");
+  }
+}
+
+function logTo(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = "log " + cls;
+  renderAll();
+}
+
+// 획득 시 "+N" 글자가 위로 떠오르며 사라지는 연출. targetId 위치에서 시작한다.
+function popGain(targetId, text, color) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const span = document.createElement("span");
+  span.className = "gainPop";
+  span.textContent = text;
+  span.style.color = color;
+  target.appendChild(span);
+  setTimeout(() => span.remove(), 900);
+}
+function popGold(text) { popGain("goldBar", text, "var(--gold)"); }
+function popMaterial(text, color) {
+  popGain("monster", text, color);
+  popGain("pipStageName", text, color);
+}
+
+// ===== 이펙트 연출 =====
+
+// 클래스를 껐다 켜서 애니메이션을 처음부터 다시 재생시킨다 (짧은 간격으로 반복 트리거되어도 재생되도록).
+function pulseFx(el, className, duration) {
+  if (!el) return;
+  el.classList.remove(className);
+  void el.offsetWidth; // 리플로우를 강제해서 애니메이션을 리셋한다.
+  el.classList.add(className);
+  setTimeout(() => el.classList.remove(className), duration);
+}
+
+// 패널 전체를 살짝 물들였다 사라지는 화면 플래시.
+function flashOverlay(containerEl, className, duration) {
+  if (!containerEl) return;
+  const ov = document.createElement("div");
+  ov.className = "fxOverlay " + className;
+  containerEl.appendChild(ov);
+  setTimeout(() => ov.remove(), duration);
+}
+
+// 패널 가운데에 크게 떴다 사라지는 문구 (클리어! / 실패... / 파괴! 등).
+function popCenterText(containerEl, text, color) {
+  if (!containerEl) return;
+  const el = document.createElement("div");
+  el.className = "fxPopText";
+  el.textContent = text;
+  el.style.color = color;
+  containerEl.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+// 한 지점에서 사방으로 흩어지는 작은 입자 이펙트.
+function spawnParticles(containerEl, count, colors) {
+  if (!containerEl) return;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("span");
+    p.className = "fxParticle";
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 22 + Math.random() * 28;
+    p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    p.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    containerEl.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+// 강화(합성) 성공/실패/파괴 이펙트. 강화 탭 패널 위에서 재생된다.
+function playEnhanceFx(type) {
+  const panel = document.getElementById("tab-enhance");
+  const nameEl = document.getElementById("weaponName");
+  if (type === "success") {
+    flashOverlay(panel, "fxOverlaySuccess", 600);
+    pulseFx(nameEl, "fxGlow", 600);
+    spawnParticles(nameEl, 8, ["#ffcf6b", "#ff9a3d", "#ffe9b0"]);
+  } else if (type === "fail") {
+    flashOverlay(panel, "fxOverlayFail", 500);
+    pulseFx(nameEl, "fxShake", 400);
+  } else if (type === "destroy") {
+    flashOverlay(panel, "fxOverlayDestroy", 700);
+    pulseFx(nameEl, "fxShake", 400);
+    spawnParticles(nameEl, 12, ["#c94f4f", "#7a1f1f", "#ff8f8f"]);
+    popCenterText(panel, "파괴!", "var(--destroy)");
+  }
+}
+
+// 던전 스테이지 클리어/실패 이펙트. 전체 화면 던전 탭과 PIP 양쪽에서 재생된다.
+function playStageFx(type) {
+  const dungeonPanel = document.getElementById("tab-dungeon");
+  const pip = document.getElementById("pip");
+  if (type === "clear") {
+    flashOverlay(dungeonPanel, "fxOverlaySuccess", 600);
+    flashOverlay(pip, "fxOverlaySuccess", 600);
+    popCenterText(dungeonPanel, "클리어!", "var(--success)");
+    popCenterText(pip, "클리어!", "var(--success)");
+  } else if (type === "fail") {
+    flashOverlay(dungeonPanel, "fxOverlayDestroy", 700);
+    flashOverlay(pip, "fxOverlayDestroy", 700);
+    popCenterText(dungeonPanel, "실패...", "var(--destroy)");
+    popCenterText(pip, "실패...", "var(--destroy)");
+  }
+}
+
+// 공격이 명중할 때마다 몬스터 아이콘이 잠깐 번쩍이는 타격감 이펙트.
+function playHitFx() {
+  pulseFx(document.getElementById("monsterIconWrap"), "fxHit", 200);
+  pulseFx(document.getElementById("pipMonsterIcon"), "fxHit", 200);
+}
+
+// ===== 던전 동작 =====
+
+function startFromStage(selectId) {
+  const select = document.getElementById(selectId);
+  const chosen = Number(select.value) || 1;
+  currentStage = chosen;
+  monsterMaxHp = computeMonsterHp(currentStage);
+  monsterHp = monsterMaxHp;
+  resetStageTimer();
+  runFailed = false;
+  document.getElementById("dungeonLog").textContent = `${getStageLabel(chosen)}부터 다시 시작한다.`;
+  document.getElementById("dungeonLog").className = "log";
+  renderAll();
+}
+
+function failRun() {
+  stopBattle();
+  runFailed = true;
+  renderAll();
+  playStageFx("fail");
+}
+
+function startBattle() {
+  battling = true;
+  stageResumeTime = Date.now();
+  battleTimer = setInterval(tick, ATTACK_INTERVAL_MS);
+  startRaf();
+}
+
+function toggleBattle() {
+  if (!hasWeapon || runFailed) return;
+  if (battling) {
+    stopBattle();
+  } else {
+    startBattle();
+  }
+  renderDungeon();
+}
+
+// 스테이지 10 최초 클리어로 해금되는 기능: 클리어한 스테이지를 골라 즉시 이동하고 자동으로 전투를 시작한다.
+function jumpToStage(selectId) {
+  if (!hasWeapon) return;
+  const select = document.getElementById(selectId);
+  const chosen = Number(select.value) || 1;
+  if (battling) stopBattle();
+  currentStage = chosen;
+  monsterMaxHp = computeMonsterHp(currentStage);
+  monsterHp = monsterMaxHp;
+  resetStageTimer();
+  runFailed = false;
+  document.getElementById("dungeonLog").textContent = `${getStageLabel(chosen)}(으)로 자동 입장.`;
+  document.getElementById("dungeonLog").className = "log";
+  startBattle();
+  renderAll();
+}
+
+function stopBattle() {
+  battling = false;
+  stageElapsedBeforePause = getElapsedSec();
+  stageResumeTime = null;
+  if (battleTimer) {
+    clearInterval(battleTimer);
+    battleTimer = null;
+  }
+  stopRaf();
+}
+
+// 전투 중일 때만 매 프레임 타이머 바를 부드럽게 갱신한다 (공격/피해 로직은 여전히 500ms 틱으로 처리).
+function startRaf() {
+  if (rafId) return;
+  const loop = () => {
+    updateTimeDisplay();
+    rafId = requestAnimationFrame(loop);
+  };
+  rafId = requestAnimationFrame(loop);
+}
+
+function stopRaf() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+}
+
+function tick() {
+  if (!hasWeapon) { failRun(); return; }
+
+  const boss = isBossStage(currentStage);
+  const goldPctMult = 1 + getCardBonus("goldPct") / 100;
+  if (boss) {
+    const hitGold = Math.round(BOSS_GOLD_PER_HIT * goldPctMult);
+    gold += hitGold;
+    popGold(`+${hitGold}`);
+  }
+
+  monsterHp -= getAtk();
+  playHitFx();
+  const log = document.getElementById("dungeonLog");
+  let cleared = false;
+
+  if (monsterHp <= 0) {
+    const goldGain = Math.round(GOLD_PER_KILL * (boss ? BOSS_CLEAR_GOLD_MULTIPLIER : 1) * goldPctMult);
+    gold += goldGain;
+    popGold(`+${goldGain}`);
+    let msg = `클리어! 골드 +${goldGain}`;
+
+    if (Math.random() * 100 < ENCHANT_DROP_CHANCE) {
+      const gain = Math.max(1, Math.round(MATERIAL_BASE + currentStage * MATERIAL_PER_STAGE)) + getCardBonus("enchantFlat");
+      enchantMaterial += gain;
+      popMaterial(`철 파편 +${gain}`, "var(--enchant)");
+      msg += ` / 철 파편 +${gain}`;
+    }
+    const junkChance = Math.min(100, JUNK_DROP_CHANCE + getCardBonus("junkDrop"));
+    if (Math.random() * 100 < junkChance) {
+      const item = JUNK_ITEMS[Math.floor(Math.random() * JUNK_ITEMS.length)];
+      const gain = Math.max(1, Math.round(MATERIAL_BASE + currentStage * MATERIAL_PER_STAGE));
+      junkMaterials[item.name] = (junkMaterials[item.name] || 0) + gain;
+      popMaterial(`${item.name} +${gain}`, "var(--junk)");
+      msg += ` / ${item.name} +${gain}`;
+    }
+
+    // 도감 카드 획득 시도 (이미 수집한 카드는 다시 안 뜬다)
+    const cardKey = getStageCardKey(currentStage);
+    if (!collectedCards.has(cardKey)) {
+      const cardChance = boss ? CARD_DROP_CHANCE_BOSS : CARD_DROP_CHANCE_NORMAL;
+      if (Math.random() * 100 < cardChance) {
+        collectedCards.add(cardKey);
+        const cardDef = getStageCard(currentStage);
+        msg += ` / 도감 카드 획득: ${cardDef.cardName}!`;
+      }
+    }
+
+    if (currentStage === AUTO_ENTER_UNLOCK_STAGE && !autoEnterUnlocked) {
+      autoEnterUnlocked = true;
+      msg += ` / 던전 자동 입장 기능 해금!`;
+    }
+
+    log.textContent = msg;
+    log.className = "log kill";
+
+    maxClearedStage = Math.max(maxClearedStage, currentStage);
+    currentStage += 1;
+    monsterMaxHp = computeMonsterHp(currentStage);
+    monsterHp = monsterMaxHp;
+    resetStageTimer();
+    cleared = true;
+  } else if (getElapsedSec() >= STAGE_TIME_LIMIT_SEC) {
+    log.textContent = "시간 초과! 던전 실패.";
+    log.className = "log timeout";
+    failRun();
+    return;
+  }
+
+  renderAll();
+  if (cleared) playStageFx("clear");
+}
+
+// ===== PIP 드래그 (제목 표시줄을 잡고 창처럼 자유롭게 이동) =====
+
+function setupPipDrag() {
+  const pip = document.getElementById("pip");
+  const handle = document.getElementById("pipDragHandle");
+
+  // 초기 위치: 화면 우하단 (기존 right/bottom 배치와 동일한 위치를 left/top으로 환산)
+  pip.style.left = (window.innerWidth - pip.offsetWidth - 20) + "px";
+  pip.style.top = (window.innerHeight - pip.offsetHeight - 20) + "px";
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  handle.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button")) return; // "전체보기" 버튼 클릭은 드래그로 취급하지 않음
+    dragging = true;
+    pip.classList.add("dragging");
+    offsetX = e.clientX - pip.offsetLeft;
+    offsetY = e.clientY - pip.offsetTop;
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+    // 화면 밖으로 완전히 나가지 않도록 제한
+    x = Math.max(0, Math.min(window.innerWidth - pip.offsetWidth, x));
+    y = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, y));
+    pip.style.left = x + "px";
+    pip.style.top = y + "px";
+  });
+
+  handle.addEventListener("pointerup", (e) => {
+    dragging = false;
+    pip.classList.remove("dragging");
+    handle.releasePointerCapture(e.pointerId);
+  });
+}
+
+setTab("enhance"); // 초기 탭 지정 + 이때 PIP가 보이도록 display를 잡아준다 (드래그 초기 위치 계산 전에 보여야 함)
+setupPipDrag();
 </script>
 
 </body>
